@@ -1,6 +1,6 @@
 import unittest
 from memory import Memory
-from src.core import Core
+from core import Core
 from instructions import Instruction
 
 class TestCoreMemory(unittest.TestCase):

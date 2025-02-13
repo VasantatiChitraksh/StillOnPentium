@@ -64,7 +64,7 @@ def parse_instruction_line(line: str) -> Instruction:
         else:
             raise ValueError(f"Invalid syntax for lw/sw:{line}")
     else:
-        raise ValueError(f"OpCode not supported:{line}")
+        raise ValueError(f"OpCode not implemented yet:{line}")
     return instr
 
 
