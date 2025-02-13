@@ -4,7 +4,7 @@ def clean_line(line: str) -> str:
     comment_index = line.find('#')
     if comment_index != -1:
         line = line[0:comment_index]
-    return line.strip()
+    return line.strip() 
 
 
 def is_label(line: str) -> bool:
@@ -12,7 +12,7 @@ def is_label(line: str) -> bool:
 
 
 def extract_label(line: str) -> str:
-    return line[:-1].strip()
+    return line[:-1].strip() # Removes the : from the label
 
 
 def tokenize_instruction(line: str) -> list:
@@ -45,7 +45,7 @@ def parse_instruction_line(line: str) -> Instruction:
         else:
             raise ValueError(f"Invalid syntax for bne:{line}")
     elif opcode in ["jal"]:
-        if len(tokens) == 3:
+        if len(tokens) == 2:
             instr.rd, instr.label = tokens[1], tokens[2]
         else:
             raise ValueError(f"Invalid syntax for jal:{line}")
@@ -64,7 +64,7 @@ def parse_instruction_line(line: str) -> Instruction:
         else:
             raise ValueError(f"Invalid syntax for lw/sw:{line}")
     else:
-        raise ValueError(f"OpCode not supported:{line}")
+        raise ValueError(f"OpCode not implemented yet:{line}")
     return instr
 
 

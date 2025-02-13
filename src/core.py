@@ -64,5 +64,4 @@ class Core:
         index = int(reg[1:])
         if index == 0:
             return
-
         self.registers[index] = value
