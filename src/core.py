@@ -3,7 +3,7 @@ from instructions import Instruction
 
 
 class Core:
-    def _init_(self, core_id: int):
+    def __init__(self, core_id: int):
         self.core_id = core_id
         self.registers = [0]*32
         self.pc = 0
