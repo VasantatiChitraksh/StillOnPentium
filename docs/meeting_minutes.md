@@ -1,4 +1,11 @@
-## Meeting Minutes
+# Meeting Minutes
+
+### 13th Feb 2025
+### Members : K Sandeep, V Chitraksh
+
+- Made memory module and core module
+- Tested both modules
+---
 ### 11th Feb 2025
 ### Members : K Sandeep, V Chitraksh
 
