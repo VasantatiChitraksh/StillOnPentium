@@ -1,10 +1,11 @@
 from instructions import Instruction
 
+
 def clean_line(line: str) -> str:
     comment_index = line.find('#')
     if comment_index != -1:
         line = line[0:comment_index]
-    return line.strip() 
+    return line.strip()
 
 
 def is_label(line: str) -> bool:
@@ -12,7 +13,7 @@ def is_label(line: str) -> bool:
 
 
 def extract_label(line: str) -> str:
-    return line[:-1].strip() # Removes the : from the label
+    return line[:-1].strip()  # Removes the : from the label
 
 
 def tokenize_instruction(line: str) -> list:
@@ -33,7 +34,7 @@ def parse_instruction_line(line: str) -> Instruction:
             instr.rd, instr.rs1, instr.rs2 = tokens[1], tokens[2], tokens[3]
         else:
             raise ValueError(f"Invalid syntax for add/sub:{line}")
-    elif opcode in ["addi"]:
+    elif opcode in ["addi", "slli"]:
         if len(tokens) == 4:
             instr.rd, instr.rs1, instr.immediate = tokens[1], tokens[2], int(
                 tokens[3])

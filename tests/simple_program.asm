@@ -9,4 +9,6 @@ start:
 
 end:
     addi x1,x1,2
+    slli x6,x1,4
     sw x1,100(x10)
+    sw x6,104(x10)
