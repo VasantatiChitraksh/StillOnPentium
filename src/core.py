@@ -43,13 +43,13 @@ class Core:
         elif opcode == 'lw':
             base = self.get_register_value(instr.rs1)
             address = base + instr.immediate
-            word = memory.read_word(address)
+            word = memory.read_word(address,self.core_id)
             self.set_register_value(instr.rd, word)
         elif opcode == 'sw':
             base = self.get_register_value(instr.rs1)
             address = base + instr.immediate
             value = self.get_register_value(instr.rs2)
-            memory.write_word(address, value)
+            memory.write_word(address, value,self.core_id)
         else:
             raise NotImplementedError(
                 f"Still haven't implement the opcode {opcode}")

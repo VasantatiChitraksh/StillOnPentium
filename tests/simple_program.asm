@@ -9,3 +9,4 @@ start:
 
 end:
     addi x1,x1,2
+    sw x1,100(x10)
