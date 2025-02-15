@@ -50,6 +50,11 @@ class Core:
             address = base + instr.immediate
             value = self.get_register_value(instr.rs2)
             memory.write_word(address, value,self.core_id)
+        elif opcode == 'slli':
+            rs1_val = self.get_register_value(instr.rs1)
+            shift_amount = instr.immediate
+            result = rs1_val << shift_amount
+            self.set_register_value(instr.rd, result)
         else:
             raise NotImplementedError(
                 f"Still haven't implement the opcode {opcode}")
