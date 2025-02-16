@@ -1,12 +1,12 @@
-# Sample Assembly File for Testing
+LABELx:
+    addi x3, x3, 4
+    addi x4,x0,4
+    sw x3, 0(x14)
+    beq x3,x4,end
+LABELy:
+    sub x6, x0, x2
+    addi x2, x0, 0
+    j LABELx
 
-start:
-    add x1, x2, x3   # R-type instruction
-    sub x4, x1, x5
-    bne x1, x6, loop
-    jal x0, start
-
-loop:
-    lw x7, 0(x8)
-    sw x7, 4(x8)
-    addi x9, x9, 10
+end:
+    addi x2,x0,0

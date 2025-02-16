@@ -15,6 +15,7 @@ def run_simulator(assembly_file: str):
     while any(core.pc < len(core.program) for core in cores):
         for core in cores:
             if core.pc < len(core.program):
+                print(f"Debug: core_id : {core.core_id} and pc:{core.pc}")
                 instr = core.program[core.pc]
                 core.execute_instruction(instr, mem, label_map)
         cycle += 1
@@ -23,7 +24,7 @@ def run_simulator(assembly_file: str):
         print(f"Core {i} registers: {core.registers}")
 
     print("/n Memory Dump:")
-    for idx in range(1024):
+    for idx in range(768):
         print(f"Address {idx*4}: {mem.word[idx]}")
 
 

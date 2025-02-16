@@ -40,13 +40,13 @@ def parse_instruction_line(line: str) -> Instruction:
                 tokens[3])
         else:
             raise ValueError(f"Invalid Syntax for addi:{line}")
-    elif opcode in ["bne"]:
+    elif opcode in ["bne", "beq"]:
         if len(tokens) == 4:
             instr.rs1, instr.rs2, instr.label = tokens[1], tokens[2], tokens[3]
         else:
             raise ValueError(f"Invalid syntax for bne:{line}")
     elif opcode in ["jal"]:
-        if len(tokens) == 2:
+        if len(tokens) == 3:
             instr.rd, instr.label = tokens[1], tokens[2]
         else:
             raise ValueError(f"Invalid syntax for jal:{line}")
@@ -64,6 +64,8 @@ def parse_instruction_line(line: str) -> Instruction:
                 raise ValueError(f"Invalid memory format for lw/sw:{line}")
         else:
             raise ValueError(f"Invalid syntax for lw/sw:{line}")
+    elif opcode in ["j"]:
+        instr.label = tokens[1]
     else:
         raise ValueError(f"OpCode not implemented yet:{line}")
     return instr

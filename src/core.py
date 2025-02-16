@@ -29,32 +29,81 @@ class Core:
         elif opcode == 'addi':
             rs1_val = self.get_register_value(instr.rs1)
             self.set_register_value(instr.rd, rs1_val+instr.immediate)
+        elif opcode == 'beq':
+            rs1_val = self.get_register_value(instr.rs1)
+            rs2_val = self.get_register_value(instr.rs2)
+
+            if rs1_val == rs2_val:
+                # Jump to label's instruction index
+                new_pc = label_map[instr.label]
+                print(f"DEBUG: Branching to {instr.label} (PC={new_pc})")
+                self.pc = new_pc
+            else:
+                print("DEBUG: No branch taken. Continuing to next instruction.")
+                self.pc += 1
+
+            self.instruction_count += 1
+            return
         elif opcode == 'bne':
-            if self.get_register_value(instr.rs1) != self.get_register_value(instr.rs2):
-                self.pc = label_map[instr.label]
-                self.instruction_count += 1
-                return
+            rs1_val = self.get_register_value(instr.rs1)
+            rs2_val = self.get_register_value(instr.rs2)
+
+            if rs1_val != rs2_val:
+                # Jump to label's instruction index
+                new_pc = label_map[instr.label]
+                print(f"DEBUG: Branching to {instr.label} (PC={new_pc})")
+                self.pc = new_pc
+            else:
+                print("DEBUG: No branch taken. Continuing to next instruction.")
+                self.pc += 1
+
+            self.instruction_count += 1
+            return
         elif opcode == 'jal':
-            return_adrs = self.pc + 1
-            self.set_register_value(instr.rd, return_adrs)
-            pc = label_map[instr.label]
+            target_label = instr.label
+            if target_label not in label_map:
+                raise ValueError(f"Undefined label: {target_label}")
+
+            target_address = label_map[target_label]
+            print(
+                f"DEBUG: Jumping to {target_label} at address {target_address}")
+
+            # If rd = x7, store the "next instruction index" in x7
+            return_address = self.pc + 1
+            self.set_register_value(instr.rd, return_address)
+
+            # Jump to the label
+            self.pc = target_address
             self.instruction_count += 1
             return
         elif opcode == 'lw':
             base = self.get_register_value(instr.rs1)
             address = base + instr.immediate
-            word = memory.read_word(address,self.core_id)
+            word = memory.read_word(address, self.core_id)
             self.set_register_value(instr.rd, word)
         elif opcode == 'sw':
             base = self.get_register_value(instr.rs1)
             address = base + instr.immediate
             value = self.get_register_value(instr.rs2)
-            memory.write_word(address, value,self.core_id)
+            memory.write_word(address, value, self.core_id)
         elif opcode == 'slli':
             rs1_val = self.get_register_value(instr.rs1)
             shift_amount = instr.immediate
             result = rs1_val << shift_amount
             self.set_register_value(instr.rd, result)
+        elif opcode == 'j':
+            target_label = instr.label
+            if target_label not in label_map:
+                raise ValueError(f"Undefined label: {target_label}")
+
+            target_address = label_map[target_label]
+            print(
+                f"DEBUG: Jumping to {target_label} at address {target_address}")
+
+            # Jump to the label
+            self.pc = target_address
+            self.instruction_count += 1
+            return
         else:
             raise NotImplementedError(
                 f"Still haven't implement the opcode {opcode}")
