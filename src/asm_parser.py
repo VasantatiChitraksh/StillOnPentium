@@ -40,7 +40,7 @@ def parse_instruction_line(line: str) -> Instruction:
                 tokens[3])
         else:
             raise ValueError(f"Invalid Syntax for addi:{line}")
-    elif opcode in ["bne", "beq"]:
+    elif opcode in ["bne", "beq", "bge"]:
         if len(tokens) == 4:
             instr.rs1, instr.rs2, instr.label = tokens[1], tokens[2], tokens[3]
         else:

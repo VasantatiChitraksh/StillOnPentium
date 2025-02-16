@@ -36,10 +36,8 @@ class Core:
             if rs1_val == rs2_val:
                 # Jump to label's instruction index
                 new_pc = label_map[instr.label]
-                print(f"DEBUG: Branching to {instr.label} (PC={new_pc})")
                 self.pc = new_pc
             else:
-                print("DEBUG: No branch taken. Continuing to next instruction.")
                 self.pc += 1
 
             self.instruction_count += 1
@@ -51,10 +49,21 @@ class Core:
             if rs1_val != rs2_val:
                 # Jump to label's instruction index
                 new_pc = label_map[instr.label]
-                print(f"DEBUG: Branching to {instr.label} (PC={new_pc})")
                 self.pc = new_pc
             else:
-                print("DEBUG: No branch taken. Continuing to next instruction.")
+                self.pc += 1
+
+            self.instruction_count += 1
+            return
+        elif opcode == 'bge':
+            rs1_val = self.get_register_value(instr.rs1)
+            rs2_val = self.get_register_value(instr.rs2)
+
+            if rs1_val >= rs2_val:
+                # Jump to label's instruction index
+                new_pc = label_map[instr.label]
+                self.pc = new_pc
+            else:
                 self.pc += 1
 
             self.instruction_count += 1
@@ -65,10 +74,6 @@ class Core:
                 raise ValueError(f"Undefined label: {target_label}")
 
             target_address = label_map[target_label]
-            print(
-                f"DEBUG: Jumping to {target_label} at address {target_address}")
-
-            # If rd = x7, store the "next instruction index" in x7
             return_address = self.pc + 1
             self.set_register_value(instr.rd, return_address)
 
@@ -97,10 +102,6 @@ class Core:
                 raise ValueError(f"Undefined label: {target_label}")
 
             target_address = label_map[target_label]
-            print(
-                f"DEBUG: Jumping to {target_label} at address {target_address}")
-
-            # Jump to the label
             self.pc = target_address
             self.instruction_count += 1
             return

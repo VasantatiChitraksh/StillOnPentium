@@ -17,7 +17,7 @@ addi x14,x0,8
 sw x14,28(x20)
 addi x14,x0,1
 sw x14,32(x20)
-addi x14,x0,0
+addi x14,x0,10
 sw x14,36(x20)
 
 addi x14,x20,0 #Load base address of array
