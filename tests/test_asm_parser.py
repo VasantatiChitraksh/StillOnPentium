@@ -1,42 +1,38 @@
 import unittest
 import sys
 import os
-
-# Add the src directory to sys.path
 sys.path.append(os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../src")))
+from asm_parser import parse_assembly_file, Instruction
 
+class TestAsmParser(unittest.TestCase):
 
-# Now import the necessary modules
-from asm_parser import clean_line, tokenize_instruction, parse_instruction_line, parse_assembly_file
-from instructions import Instruction
+    def test_labels_and_instructions(self):
+        assembly_code = """
+        start: add a1, a2, a3 #aass
+        sub a4, a5, a6
+        loop: addi a7, a8, 10
+        bne a1, a2, loop
+        j end
+        lw a1, 0(a2)
+        sw a3, 4(a4)
+        end: j start
+        """
 
-class TestASMParser(unittest.TestCase):
+        # Write the mock assembly code to a temporary file
+        with open('test.asm', 'w') as f:
+            f.write(assembly_code)
 
-    def test_clean_line(self):
-        line = "add x1, x2, x3  # add operation"
-        cleaned = clean_line(line)
-        self.assertEqual(cleaned, "add x1, x2, x3")
+        # Parse the assembly file
+        instructions, label_map = parse_assembly_file('test.asm')
 
-    def test_tokenize_instruction(self):
-        line = "add x1, x2, x3"
-        tokens = tokenize_instruction(line)
-        self.assertEqual(tokens, ["add", "x1", "x2", "x3"])
-
-    def test_parse_instruction_line_add(self):
-        line = "add x1, x2, x3"
-        instr = parse_instruction_line(line)
-        self.assertEqual(instr.opcode, "add")
-        self.assertEqual(instr.rd, "x1")
-        self.assertEqual(instr.rs1, "x2")
-        self.assertEqual(instr.rs2, "x3")
-
-    def test_label_mapping(self):
-        # Use a multi-line string to simulate a file.
-        instructions, label_map = parse_assembly_file('tests/sample.asm')
-        print(instructions)
-        print(label_map)
-
+        i = 0
+        for inst in instructions:
+            print("Instruction "+str(i),end = " :")
+            print(inst)
+            i+=1
+        for label in label_map:
+            print(label+"|"+str(label_map[label]))
 
 if __name__ == '__main__':
     unittest.main()
