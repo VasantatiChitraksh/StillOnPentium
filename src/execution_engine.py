@@ -35,7 +35,7 @@ def run_program(assembly_file: str):
 
     while core.pc < len(core.program):
         instr = core.program[core.pc]
-        # print(f"Cycle: {cycle} Executing pc={core.pc} {instr.original_line}")
+        print(f"Cycle: {cycle} Executing pc={core.pc} {instr.original_line}")
         core.execute_instruction(instr, mem, label_map)
         cycle += 1
         record_state()

@@ -50,6 +50,12 @@ def parse_instruction_line(line: str) -> Instruction:
             instr.rd, instr.label = tokens[1], tokens[2]
         else:
             raise ValueError(f"Invalid syntax for jal:{line}")
+    elif opcode in ["jalr"]:
+        if len(tokens) == 4:
+            instr.rd, instr.rs1, instr.immediate = tokens[1], tokens[2], int(
+                tokens[3])
+        else:
+            raise ValueError(f"Invalid syntax for jalr:{line}")
     elif opcode in ["lw", "sw"]:
         if len(tokens) == 3:
             if opcode == "lw":
