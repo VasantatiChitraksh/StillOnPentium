@@ -81,6 +81,15 @@ class Core:
             self.pc = target_address
             self.instruction_count += 1
             return
+        elif opcode == 'jalr':
+            rs1_val = self.get_register_value(instr.rs1)
+            return_address = self.pc + 1
+            self.set_register_value(instr.rd, return_address)
+
+            # Jump to the label
+            self.pc = rs1_val + instr.immediate
+            self.instruction_count += 1
+            return
         elif opcode == 'lw':
             base = self.get_register_value(instr.rs1)
             address = base + instr.immediate
