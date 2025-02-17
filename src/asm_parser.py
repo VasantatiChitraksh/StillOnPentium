@@ -9,11 +9,17 @@ def clean_line(line: str) -> str:
 
 
 def is_label(line: str) -> bool:
-    return line.endswith(':')  # Only Allows label instruction that end with :
+    if(line.find(':')==-1):
+        return False
+    return True  # Finds if Label has : in it
 
 
 def extract_label(line: str) -> str:
-    return line[:-1].strip()  # Removes the : from the label
+    line=line.strip()
+    cindex = line.find(':') # Finds the : index from the label
+    if(line[cindex+1:]!=""):
+        return line[0:cindex], line[cindex+1:]
+    return line[0:cindex],""
 
 
 def tokenize_instruction(line: str) -> list:
@@ -88,17 +94,27 @@ def parse_assembly_file(file_path: str):
         if not cline:  # Checks if clean_line is empty
             continue
         if is_label(cline):
-            label = extract_label(cline)
+            label,linstr = extract_label(cline)
             label_map[label] = instruction_counter
-        else:
-            instruction_counter += 1
+            linstr = clean_line(linstr)
+            if linstr!="":
+                instr = parse_instruction_line(linstr)
+                if instr is not None:
+                    instructions.append(instr)
+                    instruction_counter += 1
+        else: 
+            instr = parse_instruction_line(cline)
+            if instr is not None:
+                instructions.append(instr)   
+                instruction_counter += 1
     # We use two for loops because it is best to get all labels into the label map before trying to parse the instructions
-    for line in lines:
-        cline = clean_line(line)
-        if not cline or is_label(cline):
-            continue
-        instr = parse_instruction_line(cline)
-        if instr is not None:
-            instructions.append(instr)
+    # for line in lines:
+    #     cline = clean_line(line)
+    #     if not cline or is_label(cline):
+    #         continue
+    #     instr = parse_instruction_line(cline)
+    #     if instr is not None:
+    #         instructions.append(instr)
+
 
     return instructions, label_map
