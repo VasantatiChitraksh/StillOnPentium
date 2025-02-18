@@ -1,5 +1,6 @@
 
 from instructions import Instruction
+from data_instructions import DataInstruction
 
 
 class Core:
@@ -10,6 +11,18 @@ class Core:
         self.program = []
         self.instruction_count = 0
         self.stall_count = 0
+
+    def execute_data_instruction(self, data_instructions: DataInstruction, data_values: int, memory)-> map:
+        label_map = {}
+        address = 1024 - data_values*4
+        for data_instr in data_instructions:
+            if data_instr.label:
+                label_map[data_instr.label] = address
+            for value in data_instr.values:
+                memory.write_word(address, value, self.core_id)
+                address += 4
+        return label_map
+
 
     def execute_instruction(self, instr: Instruction, memory, label_map: dict):
         opcode = instr.opcode

@@ -15,17 +15,6 @@ def is_label(line: str) -> bool:
     return True  # Finds if Label has : in it
 
 
-def is_label_with_address(line: str) -> bool:
-    # return true if label has a numeric address after the :
-    line = line.strip()
-    cindex = line.find(':')  # Finds the : index from the label
-    if (line[cindex+1:] != ""):
-        try:
-            int(line[cindex+1:])
-        except ValueError:
-            return False
-        return True
-    return False
 
 
 def extract_label(line: str) -> str:
@@ -120,74 +109,89 @@ def parse_instruction_line(line: str) -> Instruction:
     return instr
 
 
-def parse_data_section(lines: list) -> tuple:
-    data_instructions = []
-    label_map = {}
-    data_start = -1
-    data_end = -1
+# def parse_data_section(lines: list) -> tuple:
+#     data_instructions = []
+#     label_map = {}
+#     data_start = -1
+#     data_end = -1
 
-    # Find the range of the .data section
-    for i, line in enumerate(lines):
-        cline = clean_line(line)
-        if not cline:
-            continue
-        if cline.startswith(".data"):
-            data_start = i + 1  # Start after .data
-        elif cline.startswith(".text"):
-            data_end = i  # Stop before .text
-            break
+#     # Find the range of the .data section
+#     for i, line in enumerate(lines):
+#         cline = clean_line(line)
+#         if not cline:
+#             continue
+#         if cline.startswith(".data"):
+#             data_start = i + 1  # Start after .data
+#         elif cline.startswith(".text"):
+#             data_end = i  # Stop before .text
+#             break
 
-    # If .text isn't found, use length of lines as end
-    if data_end == -1:
-        data_end = len(lines)
+#     # If .text isn't found, use length of lines as end
+#     if data_end == -1:
+#         data_end = len(lines)
 
-    # Ensure valid range before iterating
-    if data_start == -1:
-        raise ValueError("Invalid or missing .data section!")
+#     # Ensure valid range before iterating
+#     if data_start == -1:
+#         raise ValueError("Invalid or missing .data section!")
 
-    lines = lines[data_start:data_end]
+#     lines = lines[data_start:data_end]
 
-    i = 0
-    while i < len(lines):
-        cline = clean_line(lines[i])
-        if not cline:
-            continue
+#     i = 0
+#     while i < len(lines):
+#         cline = clean_line(lines[i])
+#         if not cline:
+#             i += 1
+#             continue
 
-        tokens = tokenize_instruction(cline)
-        if not tokens:
-            continue
+#         tokens = tokenize_instruction(cline)
+#         if not tokens:
+#             i += 1
+#             continue
 
-        # Handle label
-        label = tokens[0].strip(":")
+        
 
-        # Case 1: Single address value
-        if len(tokens) == 3 and tokens[2].isdigit():
-            label_map[label] = int(tokens[2])
-            print(f"Processed label: {label} with address: {tokens[2]}")
-            continue
+#         # Handle label
+#         label = tokens[0].strip(":")
 
-        # Case 2: Array values
-        elif len(tokens) >= 3 and tokens[1] == ".word":
-            values = []
-            for value in tokens[2:]:
-                try:
-                    values.append(int(value))
-                except ValueError:
-                    raise ValueError(
-                        f"Invalid numeric value in data section: {value}")
+#         # Case 1: Single address value
+#         if len(tokens) == 3 and tokens[2].isdigit():
+#             label_map[label] = int(tokens[2])
+#             print(f"Processed label: {label} with address: {tokens[2]}")
+#             i += 1
+#             continue
 
-            data_instructions.append({
-                'label': label,
-                'directive': ".word",
-                'values': values,
-                'original_line': cline
-            })
-            print(f"Processed label: {label} with values: {values}")
-        else:
-            raise ValueError(f"Invalid data section line: {cline}")
+#         # Case 2: Array values
+#         elif len(tokens) >= 3 and tokens[1] == ".word":
+#             values = []
+#             for value in tokens[2:]:
+#                 try:
+#                     values.append(int(value))
+#                 except ValueError:
+#                     raise ValueError(
+#                         f"Invalid numeric value in data section: {value}")
 
-        i += 1
-    return data_instructions, label_map
+#             data_instructions.append({
+#                 'label': label,
+#                 'directive': ".word",
+#                 'values': values,
+#                 'original_line': cline
+#             })
+#             # print(f"Processed label: {label} with values: {values}")
+#         else:
+#             raise ValueError(f"Invalid data section line: {cline}")
+#         i +=1
+#     return data_instructions, label_map
+
+def parse_data_instruction_line(line: str) -> DataInstruction:
+    tokens = tokenize_instruction(line)
+    if tokens[1] == ".word":
+        label = tokens[0].rstrip(':')
+        directive = ".word"
+        values = [int(val) for val in tokens[2:]]
+        return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-2
+    else:
+        raise ValueError(f"Invalid data instruction: {line}")
+    
 
 
 def parse_assembly_file(file_path: str):
@@ -199,28 +203,31 @@ def parse_assembly_file(file_path: str):
         lines = f.readlines()
 
     instruction_counter = 0
-    i = 0
+    in_data_section = False
+    in_text_section = True
+    data_values = 0
 
-    while i < len(lines):
-        cline = clean_line(lines[i])
+    for line in lines:
+        cline = clean_line(line)
         if not cline:  # Skip empty lines
-            i += 1
             continue
 
-        if cline.startswith('.data'):
-            # Parse data section and update global label map
-            data_instr, label_address_map = parse_data_section(lines)
-            global_label_map.update(label_address_map)
-            data_instructions.extend(data_instr)
+        if cline == '.data':
+            in_data_section = True
+            in_text_section = False
+            continue
+        elif cline == '.text':
+            in_data_section = False
+            in_text_section = True
+            continue
 
-        elif cline.startswith('.text'):
-            i += 1
-            while i < len(lines):
-                cline = clean_line(lines[i])
-                if not cline:
-                    i += 1
-                    continue
+        if in_data_section:
+            data_instr,i = parse_data_instruction_line(cline)
+            if data_instr:
+                data_instructions.append(data_instr)
+                data_values += i
 
+        elif in_text_section:
                 if is_label(cline):
                     label, linstr = extract_label(cline)
                     global_label_map[label] = instruction_counter
@@ -235,9 +242,8 @@ def parse_assembly_file(file_path: str):
                     if instr:
                         instructions.append(instr)
                         instruction_counter += 1
+    
 
-                i += 1
-        else:
-            i += 1  # Ignore any unrecognized lines
 
-    return data_instructions, instructions, global_label_map
+
+    return instructions, global_label_map, data_instructions, data_values
