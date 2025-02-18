@@ -107,14 +107,6 @@ def parse_assembly_file(file_path: str):
             if instr is not None:
                 instructions.append(instr)   
                 instruction_counter += 1
-    # We use two for loops because it is best to get all labels into the label map before trying to parse the instructions
-    # for line in lines:
-    #     cline = clean_line(line)
-    #     if not cline or is_label(cline):
-    #         continue
-    #     instr = parse_instruction_line(cline)
-    #     if instr is not None:
-    #         instructions.append(instr)
 
 
     return instructions, label_map
