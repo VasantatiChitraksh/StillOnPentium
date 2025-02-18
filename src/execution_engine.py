@@ -9,7 +9,8 @@ import matplotlib.animation as animation
 
 
 def run_program(assembly_file: str):
-    instructions, label_map = parse_assembly_file(assembly_file)
+    data_instructions, instructions, label_map = parse_assembly_file(
+        assembly_file)
     print(f"Loaded {len(instructions)} instructions with labels: {label_map}")
 
     mem = Memory(size_in_bytes=4096)

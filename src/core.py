@@ -100,6 +100,13 @@ class Core:
             address = base + instr.immediate
             value = self.get_register_value(instr.rs2)
             memory.write_word(address, value, self.core_id)
+        elif opcode == 'li':
+            self.set_register_value(instr.rd, instr.immediate)
+        elif opcode == 'nop':
+            pass
+        elif opcode == 'la':
+            address = label_map[instr.label]
+            self.set_register_value(instr.rd, address)
         elif opcode == 'slli':
             rs1_val = self.get_register_value(instr.rs1)
             shift_amount = instr.immediate

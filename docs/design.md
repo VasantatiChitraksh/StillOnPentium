@@ -17,3 +17,4 @@
 - The **Simulator Controller** loads an assembly file using the **Instruction Parser**.
 - The parsed instructions are fed to each **Core** instance.
 - Each **Core** executes instructions and interacts with the **Memory** as needed.
+
