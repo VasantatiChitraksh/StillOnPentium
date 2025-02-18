@@ -1,5 +1,8 @@
-addi x20,x0,600
-addi x14,x0,1
+.data
+address: .word 600,3,2,45,6
+.text
+addi x20,x20,600
+li x14 1
 sw x14,0(x20)
 addi x14,x0,5
 sw x14,4(x20)
