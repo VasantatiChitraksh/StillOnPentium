@@ -5,15 +5,18 @@ import matplotlib.animation as animation
 
 from memory import Memory
 from core import Core
-from asm_parser import parse_assembly_file
+from asm_parser import parse_assembly_file,DataInstruction
 
 
 def run_simulator(assembly_file: str):
     # 1. Parse assembly and initialize memory/cores
-    instructions, label_map = parse_assembly_file(assembly_file)
+    instructions, label_map,data_instructions,data_values = parse_assembly_file(assembly_file)
     mem = Memory(size_in_bytes=4096)
     cores = [Core(core_id=i) for i in range(4)]
     for core in cores:
+        data_label_map = core.execute_data_instruction(data_instructions, data_values, mem)
+        label_map.update(data_label_map)
+        print(label_map)
         core.program = instructions
 
     # 2. Track history of registers and memory
@@ -40,6 +43,7 @@ def run_simulator(assembly_file: str):
         for core in cores:
             if core.pc < len(core.program):
                 instr = core.program[core.pc]
+                print(instr)
                 core.execute_instruction(instr, mem, label_map)
         cycle += 1
 
