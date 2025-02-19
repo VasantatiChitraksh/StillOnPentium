@@ -50,8 +50,6 @@ def run_simulator(assembly_file: str):
         # Record state after this cycle
         record_state()
 
-    print(f"Simulation completed in {cycle} cycles.")
-
     # 4. Dynamic Visualization (Registers + Memory)
     fig, axes = plt.subplots(2, 1, figsize=(12, 8))
 
@@ -91,8 +89,7 @@ def run_simulator(assembly_file: str):
 
     ani = animation.FuncAnimation(fig, update, frames=range(0, len(
         registers_history), 16), interval=10, blit=False)
-
-    print(f"Simulation done in {cycle} cycles")
+    
     for i, core in enumerate(cores):
         print(f"Core {i} registers: {core.registers}")
 
@@ -102,6 +99,9 @@ def run_simulator(assembly_file: str):
         addresses = [
             f"Address {i*4}: {mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
         print("  |  ".join(addresses))
+
+    print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
+    print(f"Simulation done in {cycle*4} cycles (No Parallelism).")
 
     plt.tight_layout()
     plt.show()
