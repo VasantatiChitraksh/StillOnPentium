@@ -16,7 +16,14 @@ Please refer to [docs/meeting_minutes.md](docs/meeting_minutes.md) for the meeti
 3. Run the simulator using `python src/main.py`.
 
 ## Features (Phase 1)
-- Supports instructions: ADD, SUB, BNE, JAL, LW, SW, and one additional immediate-type instruction.
+- Supports instructions:
+  - ADD, SUB, ADDI
+  - BNE, BEQ, BGE
+  - JAL, JALR, J
+  - LW, SW
+  - LI, LA
+  - NOP
+- Supports .data and .text sections with data section being created at the end of memory
 - Four cores with a dedicated read-only core number register.
 - Shared 4KB memory (1KB per core segment).
 
