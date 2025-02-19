@@ -1,5 +1,3 @@
-.data
-arr: .word 1 5 2 4 7 2 6 8 1 0
 .text 
 la x1,arr         # Load array address
 addi x2,x0,10     # n = 10
@@ -35,9 +33,11 @@ swap:
     addi x5,x5,1          # increment j
     j loop2
     
-next_iter:
-    addi x4,x4,1          # increment i
+next_iter:addi x4,x4, 1          # increment i
     j loop1
     
 out:
     nop
+
+.data
+arr: .word 1 5 2 4 7 2 6 8 1 0
