@@ -109,90 +109,23 @@ def parse_instruction_line(line: str) -> Instruction:
     return instr
 
 
-# def parse_data_section(lines: list) -> tuple:
-#     data_instructions = []
-#     label_map = {}
-#     data_start = -1
-#     data_end = -1
-
-#     # Find the range of the .data section
-#     for i, line in enumerate(lines):
-#         cline = clean_line(line)
-#         if not cline:
-#             continue
-#         if cline.startswith(".data"):
-#             data_start = i + 1  # Start after .data
-#         elif cline.startswith(".text"):
-#             data_end = i  # Stop before .text
-#             break
-
-#     # If .text isn't found, use length of lines as end
-#     if data_end == -1:
-#         data_end = len(lines)
-
-#     # Ensure valid range before iterating
-#     if data_start == -1:
-#         raise ValueError("Invalid or missing .data section!")
-
-#     lines = lines[data_start:data_end]
-
-#     i = 0
-#     while i < len(lines):
-#         cline = clean_line(lines[i])
-#         if not cline:
-#             i += 1
-#             continue
-
-#         tokens = tokenize_instruction(cline)
-#         if not tokens:
-#             i += 1
-#             continue
-
-        
-
-#         # Handle label
-#         label = tokens[0].strip(":")
-
-#         # Case 1: Single address value
-#         if len(tokens) == 3 and tokens[2].isdigit():
-#             label_map[label] = int(tokens[2])
-#             print(f"Processed label: {label} with address: {tokens[2]}")
-#             i += 1
-#             continue
-
-#         # Case 2: Array values
-#         elif len(tokens) >= 3 and tokens[1] == ".word":
-#             values = []
-#             for value in tokens[2:]:
-#                 try:
-#                     values.append(int(value))
-#                 except ValueError:
-#                     raise ValueError(
-#                         f"Invalid numeric value in data section: {value}")
-
-#             data_instructions.append({
-#                 'label': label,
-#                 'directive': ".word",
-#                 'values': values,
-#                 'original_line': cline
-#             })
-#             # print(f"Processed label: {label} with values: {values}")
-#         else:
-#             raise ValueError(f"Invalid data section line: {cline}")
-#         i +=1
-#     return data_instructions, label_map
 
 def parse_data_instruction_line(line: str) -> DataInstruction:
     tokens = tokenize_instruction(line)
     if tokens[1] == ".word":
         label = tokens[0].rstrip(':')
         directive = ".word"
-        values = [int(val) for val in tokens[2:]]
+        values = [int(val,0) for val in tokens[2:]]
         return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-2
+    elif ".word" in tokens[0]:
+        cindex = tokens[0].find(":")
+        label = tokens[0][0:cindex]
+        directive = ".word"
+        values = [int(val,0) for val in tokens[1:]]
+        return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-1
     else:
         raise ValueError(f"Invalid data instruction: {line}")
     
-
 
 def parse_assembly_file(file_path: str):
     instructions = []

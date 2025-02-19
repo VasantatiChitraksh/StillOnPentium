@@ -1,3 +1,6 @@
+.data
+arr: .word 0b10 0xa 2 4 7 2 6 8 1 0
+
 .text 
 la x1,arr         # Load array address
 addi x2,x0,10     # n = 10
@@ -38,6 +41,3 @@ next_iter:addi x4,x4, 1          # increment i
     
 out:
     nop
-
-.data
-arr: .word 1 5 2 4 7 2 6 8 1 0
