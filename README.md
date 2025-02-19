@@ -26,4 +26,5 @@ Please refer to [docs/meeting_minutes.md](docs/meeting_minutes.md) for the meeti
 - Supports .data and .text sections with data section being created at the end of memory
 - Four cores with a dedicated read-only core number register.
 - Shared 4KB memory (1KB per core segment).
+- Each core uses bounded access to use its own memory
 
