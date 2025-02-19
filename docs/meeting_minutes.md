@@ -1,5 +1,17 @@
 # Meeting Minutes
+### 19th Feb 2025
+### Members : K Sandeep, V Chitraksh
 
+- Met and discussed about future phases, whether our phase 1 is serving as a good foundation.
+- Debugged and got everything ready for the phase 1 submission.
+---
+
+### 17th Feb 2025
+### Members : K Sandeep, V Chitraksh
+
+- Decided to include .data and .text segments, and execute memory instructions before other instrcutions.
+- Bubble sort with .data is executing properly.
+---
 
 ### 16th Feb 2025
 ### Members : K Sandeep, V Chitraksh
