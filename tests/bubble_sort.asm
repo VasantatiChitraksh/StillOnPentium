@@ -1,5 +1,5 @@
 .data
-address: .word 600,3,2,45,6
+address: .word -3,2,5,-6,10,23,4,8,11,-4
 .text
 addi x20,x20,600
 li x14 1
