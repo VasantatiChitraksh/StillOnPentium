@@ -24,7 +24,8 @@ Please refer to [docs/meeting_minutes.md](docs/meeting_minutes.md) for the meeti
 ## Getting Started
 1. Clone the repository.
 2. Navigate to the project directory.
-3. Run the simulator using `python src/main.py`.
+3. Run the simulator using `python src/simulator.py [assembly_filename].asm`.(Make sure the assembly file to be run is in the root directory or in the tests folder)
+4. For e.g., `python src/simulator.py tests/bubble_sort.asm` or `python src/simulator.py tests/sample.asm`
 
 ## Features (Phase 1)
 - Supports instructions:
