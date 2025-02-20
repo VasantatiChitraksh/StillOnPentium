@@ -39,6 +39,20 @@ class Core:
 
             rd = instr.rd
             self.set_register_value(rd, rs1_val-rs2_val)
+        elif opcode == 'mul':
+            rs1_val = self.get_register_value(instr.rs1)
+            rs2_val = self.get_register_value(instr.rs2)
+
+            rd = instr.rd
+            self.set_register_value(rd, rs1_val*rs2_val)
+        elif opcode == 'div':
+            rs1_val = self.get_register_value(instr.rs1)
+            rs2_val = self.get_register_value(instr.rs2)
+
+            rd = instr.rd
+            if(rs2_val == 0):
+                raise ValueError("Division by zero")
+            self.set_register_value(rd, rs1_val//rs2_val)
         elif opcode == 'addi':
             rs1_val = self.get_register_value(instr.rs1)
             self.set_register_value(instr.rd, rs1_val+instr.immediate)

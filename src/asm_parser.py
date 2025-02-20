@@ -49,7 +49,7 @@ def parse_instruction_line(line: str) -> Instruction:
     tokens = tokenize_instruction(line)
     opcode = tokens[0].lower()
     instr = Instruction(opcode=opcode, original_line=line)
-    if opcode in ["add", "sub"]:
+    if opcode in ["add", "sub","mul","div"]:
         if len(tokens) == 4:
             instr.rd, instr.rs1, instr.rs2 = tokens[1], tokens[2], tokens[3]
         else:

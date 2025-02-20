@@ -3,9 +3,20 @@
 This project is a multi-core simulator written in Python. The simulator emulates four processor cores executing a common assembly program in parallel with a shared memory space of 4KB.
 
 ## Project Structure
-- **src/**: Simulator source code.
+- **src/**
+  - **simulator.py**:Multi Core Execution
+  - **execution_engine.py**:Single Core Execution
+  - **core.py**: Core Module
+  - **asm_parser.py**: Assembly Code Parser
+  - **memory.py**: To Handle Memory
+  - **instruction.py**:Instruction Dataclass
+  - **data_instructions.py**: .data Section
 - **tests/**: Unit tests and sample assembly programs.
-- **docs/**: Documentation and design documents.
+  - **bubble_sort.asm**
+  - **test_core_memory.py**
+- **docs/**
+  - **design.md**
+  - **meeting_minutes.md**
 
 ## Meeting Minutes
 Please refer to [docs/meeting_minutes.md](docs/meeting_minutes.md) for the meeting minutes.
