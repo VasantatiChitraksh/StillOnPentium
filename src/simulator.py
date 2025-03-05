@@ -4,7 +4,7 @@ import numpy as np
 from memory import Memory
 from core import Core
 from asm_parser import parse_assembly_file, DataInstruction
-
+from helpers import execute_data_instruction
 
 def run_simulator(assembly_file: str):
     def decimal_to_hex(n: int) -> str:
@@ -12,11 +12,13 @@ def run_simulator(assembly_file: str):
 
     instructions, label_map, data_instructions, data_values = parse_assembly_file(
         assembly_file)
+
+    # The parsed file is creating a instruction list, label map, data instruction list and data values, this serves as the common memory for all instruction as they are stored.
     mem = Memory(size_in_bytes=4096)
     cores = [Core(core_id=i) for i in range(4)]
-    for core in cores:
-        data_label_map = core.execute_data_instruction(
+    data_label_map = execute_data_instruction(
             data_instructions, data_values, mem)
+    for core in cores:
         label_map.update(data_label_map)
         core.program = instructions
 
