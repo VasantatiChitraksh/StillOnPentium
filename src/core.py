@@ -1,4 +1,4 @@
-
+from pipeline_register import PipelineRegister
 from instructions import Instruction
 
 
@@ -9,6 +9,7 @@ class Core:
         self.pc = 0
         self.instruction_count = 0
         self.stall_count = 0
+        self.pipeline_registers = [PipelineRegister() for _ in range(4)]
 
     def execute_instruction(self, instr: Instruction, memory, label_map: dict):
         opcode = instr.opcode

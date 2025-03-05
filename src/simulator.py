@@ -6,6 +6,7 @@ from core import Core
 from asm_parser import parse_assembly_file, DataInstruction
 from helpers import execute_data_instruction
 
+
 def run_simulator(assembly_file: str):
     def decimal_to_hex(n: int) -> str:
         return f"0x{n:x}"
@@ -17,16 +18,15 @@ def run_simulator(assembly_file: str):
     mem = Memory(size_in_bytes=4096)
     cores = [Core(core_id=i) for i in range(4)]
     data_label_map = execute_data_instruction(
-            data_instructions, data_values, mem)
+        data_instructions, data_values, mem)
     for core in cores:
         label_map.update(data_label_map)
-        core.program = instructions
 
     cycle = 0
-    while any(core.pc < len(core.program) for core in cores):
+    while any(core.pc < len(instructions) for core in cores):
         for core in cores:
-            if core.pc < len(core.program):
-                instr = core.program[core.pc]
+            if core.pc < len(instructions):
+                instr = instructions[core.pc]
                 core.execute_instruction(instr, mem, label_map)
         cycle += 1
 
