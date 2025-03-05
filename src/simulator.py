@@ -4,6 +4,7 @@ import numpy as np
 from memory import Memory
 from core import Core
 from asm_parser import parse_assembly_file, DataInstruction
+from helpers import execute_data_instruction
 
 
 def run_simulator(assembly_file: str):
@@ -12,19 +13,20 @@ def run_simulator(assembly_file: str):
 
     instructions, label_map, data_instructions, data_values = parse_assembly_file(
         assembly_file)
+
+    # The parsed file is creating a instruction list, label map, data instruction list and data values, this serves as the common memory for all instruction as they are stored.
     mem = Memory(size_in_bytes=4096)
     cores = [Core(core_id=i) for i in range(4)]
+    data_label_map = execute_data_instruction(
+        data_instructions, data_values, mem)
     for core in cores:
-        data_label_map = core.execute_data_instruction(
-            data_instructions, data_values, mem)
         label_map.update(data_label_map)
-        core.program = instructions
 
     cycle = 0
-    while any(core.pc < len(core.program) for core in cores):
+    while any(core.pc < len(instructions) for core in cores):
         for core in cores:
-            if core.pc < len(core.program):
-                instr = core.program[core.pc]
+            if core.pc < len(instructions):
+                instr = instructions[core.pc]
                 core.execute_instruction(instr, mem, label_map)
         cycle += 1
 

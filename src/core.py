@@ -1,6 +1,5 @@
-
+from pipeline_register import PipelineRegister
 from instructions import Instruction
-from data_instructions import DataInstruction
 
 
 class Core:
@@ -10,18 +9,7 @@ class Core:
         self.pc = 0
         self.instruction_count = 0
         self.stall_count = 0
-
-    def execute_data_instruction(self, data_instructions: DataInstruction, data_values: int, memory)-> map:
-        label_map = {}
-        address = 1024 - data_values*4
-        for data_instr in data_instructions:
-            if data_instr.label:
-                label_map[data_instr.label] = address
-            for value in data_instr.values:
-                memory.write_word(address, value, self.core_id)
-                address += 4
-        return label_map
-
+        self.pipeline_registers = [PipelineRegister() for _ in range(4)]
 
     def execute_instruction(self, instr: Instruction, memory, label_map: dict):
         opcode = instr.opcode
@@ -49,7 +37,7 @@ class Core:
             rs2_val = self.get_register_value(instr.rs2)
 
             rd = instr.rd
-            if(rs2_val == 0):
+            if (rs2_val == 0):
                 raise ValueError("Division by zero")
             self.set_register_value(rd, rs1_val//rs2_val)
         elif opcode == 'addi':
