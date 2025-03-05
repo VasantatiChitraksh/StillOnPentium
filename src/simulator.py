@@ -5,7 +5,6 @@ from memory import Memory
 from core import Core
 from asm_parser import parse_assembly_file
 
-
 def run_simulator(assembly_file: str):
     instructions, label_map = parse_assembly_file(assembly_file)
     mem = Memory(size_in_bytes=4096)
