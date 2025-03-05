@@ -1,26 +1,9 @@
-addi x20,x0,600
-addi x14,x0,1
-sw x14,0(x20)
-addi x14,x0,5
-sw x14,4(x20)
-addi x14,x0,2
-sw x14,8(x20)
-addi x14,x0,4
-sw x14,12(x20)
-addi x14,x0,7
-sw x14,16(x20)
-addi x14,x0,2
-sw x14,20(x20)
-addi x14,x0,6
-sw x14,24(x20)
-addi x14,x0,8
-sw x14,28(x20)
-addi x14,x0,1
-sw x14,32(x20)
-addi x14,x0,10
-sw x14,36(x20)
+.data
+arr:.word 0x1 -3 0x2 0x4 0x7 0x2 0x6 0x8 0x1 -1
 
-addi x14,x20,0 #Load base address of array
+.text 
+
+la x14, arr #Load base address of array
 addi x5,x0,10     #n = 10
 addi x10,x0,9   #n = 10 - 1
 addi x11,x0,0    #i = 0
@@ -52,4 +35,4 @@ if:
     sw x17,0(x21)
     j loop2
 end:
-    addi x30,x0,1431655765
+    nop

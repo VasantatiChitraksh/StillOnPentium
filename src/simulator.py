@@ -3,13 +3,21 @@ import numpy as np
 
 from memory import Memory
 from core import Core
-from asm_parser import parse_assembly_file
+from asm_parser import parse_assembly_file, DataInstruction
+
 
 def run_simulator(assembly_file: str):
-    instructions, label_map = parse_assembly_file(assembly_file)
+    def decimal_to_hex(n: int) -> str:
+        return f"0x{n:x}"
+
+    instructions, label_map, data_instructions, data_values = parse_assembly_file(
+        assembly_file)
     mem = Memory(size_in_bytes=4096)
     cores = [Core(core_id=i) for i in range(4)]
     for core in cores:
+        data_label_map = core.execute_data_instruction(
+            data_instructions, data_values, mem)
+        label_map.update(data_label_map)
         core.program = instructions
 
     cycle = 0
@@ -29,8 +37,11 @@ def run_simulator(assembly_file: str):
 
     for idx in range(0, 1024, 6):
         addresses = [
-            f"Address {i*4}: {mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
+            f"{decimal_to_hex(i*4)}: {mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
         print("  |  ".join(addresses))
+
+    print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
+    print(f"Simulation done in {cycle*4} cycles (No Parallelism).")
 
 
 if __name__ == '__main__':

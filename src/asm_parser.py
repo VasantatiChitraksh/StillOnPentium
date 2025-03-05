@@ -1,4 +1,5 @@
 from instructions import Instruction
+from data_instructions import DataInstruction
 
 
 def clean_line(line: str) -> str:
@@ -9,11 +10,27 @@ def clean_line(line: str) -> str:
 
 
 def is_label(line: str) -> bool:
-    return line.endswith(':')  # Only Allows label instruction that end with :
+    if (line.find(':') == -1):
+        return False
+    return True  # Finds if Label has : in it
+
+
 
 
 def extract_label(line: str) -> str:
-    return line[:-1].strip()  # Removes the : from the label
+    line = line.strip()
+    cindex = line.find(':')  # Finds the : index from the label
+    if (line[cindex+1:] != ""):
+        return line[0:cindex], line[cindex+1:]
+    return line[0:cindex], ""
+
+
+def extract_label_with_address(line: str) -> str:
+    line = line.strip()
+    cindex = line.find(':')  # Finds the : index from the label
+    if (line[cindex+1:] != ""):
+        return line[0:cindex], line[cindex+1:]
+    return line[0:cindex], ""
 
 
 def tokenize_instruction(line: str) -> list:
@@ -26,10 +43,13 @@ def tokenize_instruction(line: str) -> list:
 
 
 def parse_instruction_line(line: str) -> Instruction:
+    # if the line starts with .data but if it starts with .data somewhere in between the code give error then invoke a different parse line until corresponding .text is found
+    # if the line starts with .text then start parsing the instructions
+
     tokens = tokenize_instruction(line)
     opcode = tokens[0].lower()
     instr = Instruction(opcode=opcode, original_line=line)
-    if opcode in ["add", "sub"]:
+    if opcode in ["add", "sub","mul","div"]:
         if len(tokens) == 4:
             instr.rd, instr.rs1, instr.rs2 = tokens[1], tokens[2], tokens[3]
         else:
@@ -40,6 +60,13 @@ def parse_instruction_line(line: str) -> Instruction:
                 tokens[3])
         else:
             raise ValueError(f"Invalid Syntax for addi:{line}")
+    elif opcode in ["li"]:
+        if len(tokens) == 3:
+            instr.rd, instr.immediate = tokens[1], int(tokens[2])
+        else:
+            raise ValueError(f"Invalid syntax for li:{line}")
+    elif opcode in ["nop"]:
+        pass
     elif opcode in ["bne", "beq", "bge"]:
         if len(tokens) == 4:
             instr.rs1, instr.rs2, instr.label = tokens[1], tokens[2], tokens[3]
@@ -56,6 +83,11 @@ def parse_instruction_line(line: str) -> Instruction:
                 tokens[3])
         else:
             raise ValueError(f"Invalid syntax for jalr:{line}")
+    elif opcode in ["la"]:
+        if len(tokens) == 3:
+            instr.rd, instr.label = tokens[1], tokens[2]
+        else:
+            raise ValueError(f"Invalid syntax for la:{line}")
     elif opcode in ["lw", "sw"]:
         if len(tokens) == 3:
             if opcode == "lw":
@@ -77,28 +109,74 @@ def parse_instruction_line(line: str) -> Instruction:
     return instr
 
 
+
+def parse_data_instruction_line(line: str) -> DataInstruction:
+    tokens = tokenize_instruction(line)
+    if tokens[1] == ".word":
+        label = tokens[0].rstrip(':')
+        directive = ".word"
+        values = [int(val,0) for val in tokens[2:]]
+        return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-2
+    elif ".word" in tokens[0]:
+        cindex = tokens[0].find(":")
+        label = tokens[0][0:cindex]
+        directive = ".word"
+        values = [int(val,0) for val in tokens[1:]]
+        return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-1
+    else:
+        raise ValueError(f"Invalid data instruction: {line}")
+    
+
 def parse_assembly_file(file_path: str):
     instructions = []
-    label_map = {}
+    global_label_map = {}
+    data_instructions = []
+
     with open(file_path, 'r') as f:
         lines = f.readlines()
-    instruction_counter = 0
-    for line in lines:
-        cline = clean_line(line)
-        if not cline:  # Checks if clean_line is empty
-            continue
-        if is_label(cline):
-            label = extract_label(cline)
-            label_map[label] = instruction_counter
-        else:
-            instruction_counter += 1
-    # We use two for loops because it is best to get all labels into the label map before trying to parse the instructions
-    for line in lines:
-        cline = clean_line(line)
-        if not cline or is_label(cline):
-            continue
-        instr = parse_instruction_line(cline)
-        if instr is not None:
-            instructions.append(instr)
 
-    return instructions, label_map
+    instruction_counter = 0
+    in_data_section = False
+    in_text_section = True
+    data_values = 0
+
+    for line in lines:
+        cline = clean_line(line)
+        if not cline:  # Skip empty lines
+            continue
+
+        if cline == '.data':
+            in_data_section = True
+            in_text_section = False
+            continue
+        elif cline == '.text':
+            in_data_section = False
+            in_text_section = True
+            continue
+
+        if in_data_section:
+            data_instr,i = parse_data_instruction_line(cline)
+            if data_instr:
+                data_instructions.append(data_instr)
+                data_values += i
+
+        elif in_text_section:
+                if is_label(cline):
+                    label, linstr = extract_label(cline)
+                    global_label_map[label] = instruction_counter
+                    linstr = clean_line(linstr)
+                    if linstr:
+                        instr = parse_instruction_line(linstr)
+                        if instr:
+                            instructions.append(instr)
+                            instruction_counter += 1
+                else:
+                    instr = parse_instruction_line(cline)
+                    if instr:
+                        instructions.append(instr)
+                        instruction_counter += 1
+    
+
+
+
+    return instructions, global_label_map, data_instructions, data_values
