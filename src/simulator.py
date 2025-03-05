@@ -4,7 +4,7 @@ import numpy as np
 from memory import Memory
 from core import Core
 from asm_parser import parse_assembly_file, DataInstruction
-from helpers import execute_data_instruction
+from helpers import *
 
 
 def run_simulator(assembly_file: str):
@@ -26,8 +26,8 @@ def run_simulator(assembly_file: str):
     while any(core.pc < len(instructions) for core in cores):
         for core in cores:
             if core.pc < len(instructions):
-                instr = instructions[core.pc]
-                core.execute_instruction(instr, mem, label_map)
+                instruction_fetch(instructions, cores, core.core_id, core.pc)
+                core.execute_instruction(core.pipeline_registers[0].instruction, mem, label_map)
         cycle += 1
 
     print(f"Simulation completed in {cycle} cycles.")

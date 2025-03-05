@@ -1,4 +1,5 @@
 from data_instructions import DataInstruction
+from instructions import Instruction
 from memory import Memory
 
 
@@ -12,3 +13,9 @@ def execute_data_instruction(data_instructions: DataInstruction, data_values: in
             memory.write_data_to_memory(address, value)
             address += 4
     return label_map
+
+
+def instruction_fetch(instructions: any, Cores: any, core_id: int, pc: int) -> Instruction:
+    instr = instructions[pc]
+    Cores[core_id].pipeline_registers[0].instruction = instr
+    return instr
