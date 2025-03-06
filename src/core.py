@@ -93,35 +93,12 @@ class Core:
             target_label = instr.label
             if self.pipeline_registers[1].label not in label_map:
                 raise ValueError(f"Undefined label: {target_label}")
-
-            # Jump to the label
-            # target_address = label_map[target_label]
-            # self.set_register_value(instr.rd, return_address)
-            # self.pc = target_address
-            # self.instruction_count += 1
-            # return
-        # elif opcode == 'jalr': # jalr rd, immediate(rs1)
-        #     self.pipeline_registers[1].label = instr.label
-        #     self.pipeline_registers[1].rd = instr.rd
-        #     self.pipeline_registers[1].jump_return_address = self.pc + 1
-        #     target_label = instr.label
-        #     if self.pipeline_registers[1].label not in label_map:
-        #         raise ValueError(f"Undefined label: {target_label}")
-
-            # Jump to the label
-            # self.pc = rs1_val + instr.immediate
-            # self.instruction_count += 1
-            # return
+            
         elif opcode == 'j':
             self.pipeline_registers[1].label = instr.label
             target_label = instr.label
             if target_label not in label_map:
                 raise ValueError(f"Undefined label: {target_label}")
-
-            # target_address = label_map[target_label]
-            # self.pc = target_address
-            # self.instruction_count += 1
-            # return
         else:
             raise NotImplementedError(
                 f"Still haven't implement the opcode {opcode}")
