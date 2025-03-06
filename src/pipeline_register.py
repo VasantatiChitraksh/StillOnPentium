@@ -2,6 +2,7 @@ class PipelineRegister:
     def __init__(self):
         self.pc = 0                # Program Counter
         self.instruction = None     # Current instruction
+        self.isUsed = False
         self.opcode = None
         self.rd = None
         self.rs1 = None
