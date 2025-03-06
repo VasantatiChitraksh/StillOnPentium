@@ -15,7 +15,6 @@ def execute_data_instruction(data_instructions: DataInstruction, data_values: in
     return label_map
 
 
-def instruction_fetch(instructions: any, Cores: any, core_id: int, pc: int) -> Instruction:
+def instruction_fetch(instructions: any, Cores: any, core_id: int, pc: int):
     instr = instructions[pc]
     Cores[core_id].pipeline_registers[0].instruction = instr
-    return instr

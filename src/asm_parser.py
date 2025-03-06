@@ -52,6 +52,7 @@ def parse_instruction_line(line: str) -> Instruction:
     if opcode in ["add", "sub","mul","div"]:
         if len(tokens) == 4:
             instr.rd, instr.rs1, instr.rs2 = tokens[1], tokens[2], tokens[3]
+            print("instr = ",instr.rd, instr.rs1, instr.rs2)
         else:
             raise ValueError(f"Invalid syntax for add/sub:{line}")
     elif opcode in ["addi", "slli"]:
