@@ -23,12 +23,22 @@ def run_simulator(assembly_file: str):
         label_map.update(data_label_map)
 
     cycle = 0
-    while any(core.pc < len(instructions) for core in cores):
+
+    pipeline_active = True
+    while pipeline_active:
         for core in cores:
-            if core.pc < len(instructions):
-                instruction_fetch(instructions, cores, core.core_id, core.pc)
-                core.execute_instruction(core.pipeline_registers[0].instruction, mem, label_map)
+            core.execute_instruction(core.pipeline_registers[0].instruction, mem, label_map)
+            instruction_fetch(instructions, cores, core.core_id, core.pc)
+
+            fetch_possible = True
+            if core.pc >= len(instructions):
+                fetch_possible = False
+
+        for core in cores:
+            if not fetch_possible and not core.pipeline_registers[0].isUsed and not core.pipeline_registers[1].isUsed and not core.pipeline_registers[2].isUsed and not core.pipeline_registers[3].isUsed:
+                pipeline_active = False
         cycle += 1
+
 
     print(f"Simulation completed in {cycle} cycles.")
     print(f"Simulation done in {cycle} cycles")

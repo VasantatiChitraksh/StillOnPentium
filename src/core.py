@@ -13,6 +13,9 @@ class Core:
         #IF_ID = 0, ID_EX = 1, EX_MEM = 2, MEM_WB = 3
 #---------------------------------------------------INSTRUCTION DECODE AND REGISTER FETCH---------------------------------------------------#
     def instr_decode_reg_fetch(self,instr: Instruction,label_map: dict):
+        if not self.pipeline_registers[0].isUsed:
+            return
+        self.pipeline_registers[1].isUsed = True
         self.pipeline_registers[1].pc = self.pc
         self.pipeline_registers[1].instruction = self.pipeline_registers[0].instruction
         self.pipeline_registers[1].opcode = self.pipeline_registers[0].instruction.opcode
@@ -102,8 +105,12 @@ class Core:
         else:
             raise NotImplementedError(
                 f"Still haven't implement the opcode {opcode}")
+        self.pipeline_registers[0] = PipelineRegister()
 #---------------------------------------------------EXECUTE---------------------------------------------------#        
     def execute(self, memory, label_map: dict):
+        if not self.pipeline_registers[1].isUsed:
+            return
+        self.pipeline_registers[2].isUsed = True
         self.pipeline_registers[2].pc = self.pipeline_registers[1].pc
         self.pipeline_registers[2].instruction = self.pipeline_registers[1].instruction
         self.pipeline_registers[2].opcode = self.pipeline_registers[1].instruction.opcode
@@ -151,9 +158,6 @@ class Core:
             self.pipeline_registers[2].branch_taken = self.pipeline_registers[2].rs1 == self.pipeline_registers[2].rs2
             if self.pipeline_registers[2].branch_taken:
                 self.pipeline_registers[2].pc = label_map[self.pipeline_registers[2].branch_target]
-                self.instruction_count += 1
-            else:
-                self.pipeline_registers[2].pc += 1
             return
         
         elif opcode == 'bne':
@@ -163,9 +167,6 @@ class Core:
             self.pipeline_registers[2].branch_taken = self.pipeline_registers[2].rs1 != self.pipeline_registers[2].rs2
             if self.pipeline_registers[2].branch_taken:
                 self.pipeline_registers[2].pc = label_map[self.pipeline_registers[2].branch_target]
-                self.instruction_count += 1
-            else:
-                self.pipeline_registers[2].pc += 1
             return
         
         elif opcode == 'bge':
@@ -175,9 +176,6 @@ class Core:
             self.pipeline_registers[2].branch_taken = self.pipeline_registers[2].rs1 >= self.pipeline_registers[2].rs2
             if self.pipeline_registers[2].branch_taken:
                 self.pipeline_registers[2].pc = label_map[self.pipeline_registers[2].branch_target]
-                self.instruction_count += 1
-            else:
-                self.pipeline_registers[2].pc += 1
             return
         
         elif opcode == 'lw': # lw rd, immediate(rs1)
@@ -209,22 +207,27 @@ class Core:
             self.pipeline_registers[2].label = self.pipeline_registers[1].label
             self.pipeline_registers[2].rd = self.pipeline_registers[1].rd
             self.pipeline_registers[2].jump_return_address = self.pipeline_registers[1].jump_return_address
-            self.pc = label_map[self.pipeline_registers[2].label]
-            self.pipeline_registers[2].pc = self.pc
+            self.pipeline_registers[2].branch_taken = True
+            self.pipeline_registers[2].pc = label_map[self.pipeline_registers[2].label]
         
         elif opcode == 'jalr': # jalr rd, immediate(rs1)
             self.pipeline_registers[2].label = self.pipeline_registers[1].label
             self.pipeline_registers[2].rd = self.pipeline_registers[1].rd
             self.pipeline_registers[2].execute_result = self.pipeline_registers[1].rs1 + self.pipeline_registers[1].immediate
-            self.pc = self.pipeline_registers[2].execute_result
-            self.pipeline_registers[2].pc = self.pc
+            self.pipeline_registers[2].branch_taken = True
+            self.pipeline_registers[2].pc = self.pipeline_registers[2].execute_result
         
         elif opcode == 'j':
             self.pipeline_registers[2].label = self.pipeline_registers[1].label
-            self.pc = label_map[self.pipeline_registers[2].label]
-            self.pipeline_registers[2].pc = self.pc
+            self.pipeline_registers[2].pc = label_map[self.pipeline_registers[2].label]
+            self.pipeline_registers[2].branch_taken = True
+        
+        self.pipeline_registers[1] = PipelineRegister()
  #---------------------------------------------------MEMORY ACCESS---------------------------------------------------#   
     def memory_access(self, memory):
+        if not self.pipeline_registers[2].isUsed:
+            return
+        self.pipeline_registers[3].isUsed = True
         self.pipeline_registers[3].pc = self.pipeline_registers[2].pc
         self.pipeline_registers[3].instruction = self.pipeline_registers[2].instruction
         self.pipeline_registers[3].opcode = self.pipeline_registers[2].opcode
@@ -251,35 +254,32 @@ class Core:
         if opcode in ['jal','jalr']:
             self.pipeline_registers[3].rd = self.pipeline_registers[2].rd
             self.pipeline_registers[3].jump_return_address = self.pipeline_registers[2].jump_return_address
+        
+        self.pipeline_registers[2] = PipelineRegister()
 #---------------------------------------------------WRITE BACK---------------------------------------------------#
     def write_back(self):
+        if not self.pipeline_registers[3].isUsed:
+            return
         opcode = self.pipeline_registers[3].opcode
         #beq,bne,bge,sw,nop,j do not need write back
         if opcode in ['add','sub','mul','div']:
-            self.pc = self.pipeline_registers[3].pc + 1
             self.set_register_value(self.pipeline_registers[3].rd,self.pipeline_registers[3].execute_result)
         elif opcode in ['addi','slli']:
-            self.pc = self.pipeline_registers[3].pc + 1
             self.set_register_value(self.pipeline_registers[3].rd,self.pipeline_registers[3].execute_result)
         elif opcode in ['lw','li']:
-            self.pc = self.pipeline_registers[3].pc + 1
             self.set_register_value(self.pipeline_registers[3].rd,self.pipeline_registers[3].mem_result)
         elif opcode == 'la':
-            self.pc = self.pipeline_registers[3].pc+1
             self.set_register_value(self.pipeline_registers[3].rd,self.pipeline_registers[3].execute_result)
         elif opcode in ['jal','jalr']:
-            self.pc = self.pipeline_registers[3].pc
             self.set_register_value(self.pipeline_registers[3].rd,self.pipeline_registers[3].jump_return_address)
-        elif opcode in ['beq','bne','bge','j']:
-            self.pc = self.pipeline_registers[3].pc
-        else:
-            self.pc = self.pipeline_registers[3].pc + 1
+        
+        self.pipeline_registers[3] = PipelineRegister()
 #---------------------------------------------------EXECUTE INSTRUCTION------------------------------------------------
     def execute_instruction(self, instr: Instruction, memory, label_map: dict):
-        self.instr_decode_reg_fetch(instr, label_map)
-        self.execute(memory, label_map)
-        self.memory_access(memory)
         self.write_back()
+        self.memory_access(memory)
+        self.execute(memory, label_map)
+        self.instr_decode_reg_fetch(instr, label_map)
         self.instruction_count += 1
 
     def get_register_value(self, reg: str) -> int:

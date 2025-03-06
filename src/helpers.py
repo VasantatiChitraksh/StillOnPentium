@@ -16,5 +16,14 @@ def execute_data_instruction(data_instructions: DataInstruction, data_values: in
 
 
 def instruction_fetch(instructions: any, Cores: any, core_id: int, pc: int):
+    if(pc) >= len(instructions):
+        return
     instr = instructions[pc]
+    # if core_id == 0:
+    #     print(pc,instr)
     Cores[core_id].pipeline_registers[0].instruction = instr
+    Cores[core_id].pipeline_registers[0].isUsed = True
+    if Cores[core_id].pipeline_registers[2].branch_taken:
+        Cores[core_id].pc = Cores[core_id].pipeline_registers[2].pc
+    else:
+        Cores[core_id].pc +=1
