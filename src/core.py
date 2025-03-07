@@ -21,17 +21,7 @@ class Core:
         self.pipeline_registers[1].opcode = self.pipeline_registers[0].instruction.opcode
         opcode = self.pipeline_registers[1].opcode
 
-        if opcode == 'add':
-            self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
-            self.pipeline_registers[1].rs2 = self.get_register_value(instr.rs2)
-            self.pipeline_registers[1].rd = instr.rd
-
-        elif opcode == 'sub':
-            self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
-            self.pipeline_registers[1].rs2 = self.get_register_value(instr.rs2)
-            self.pipeline_registers[1].rd = instr.rd
-
-        elif opcode == 'mul':
+        if opcode in ['add','sub','mul']:
             self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
             self.pipeline_registers[1].rs2 = self.get_register_value(instr.rs2)
             self.pipeline_registers[1].rd = instr.rd
@@ -44,39 +34,18 @@ class Core:
             if (self.pipeline_registers[1].rs2 == 0):
                 raise ValueError("Division by zero")
             
-        elif opcode == 'addi':
+        elif opcode in ['addi','slli','lw']:
             self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
             self.pipeline_registers[1].immediate = instr.immediate
             self.pipeline_registers[1].rd = instr.rd
 
-        
-        elif opcode == 'slli':
-            self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
-            self.pipeline_registers[1].immediate = instr.immediate
-            self.pipeline_registers[1].rd = instr.rd
 
-        elif opcode == 'beq':
+        elif opcode in ['beq','bne','bge']:
             self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
             self.pipeline_registers[1].rs2 = self.get_register_value(instr.rs2)
             self.pipeline_registers[1].branch_taken = False
             self.pipeline_registers[1].branch_target = instr.label
 
-        elif opcode == 'bne':
-            self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
-            self.pipeline_registers[1].rs2 = self.get_register_value(instr.rs2)
-            self.pipeline_registers[1].branch_taken = False
-            self.pipeline_registers[1].branch_target = instr.label
-
-        elif opcode == 'bge':
-            self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
-            self.pipeline_registers[1].rs2 = self.get_register_value(instr.rs2)
-            self.pipeline_registers[1].branch_taken = False
-            self.pipeline_registers[1].branch_target = instr.label
-
-        elif opcode == 'lw': # lw rd, immediate(rs1)
-            self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
-            self.pipeline_registers[1].immediate = instr.immediate
-            self.pipeline_registers[1].rd = instr.rd
         elif opcode == 'sw': # sw rs2, immediate(rs1)
             self.pipeline_registers[1].rs1 = self.get_register_value(instr.rs1)
             self.pipeline_registers[1].immediate = instr.immediate
@@ -96,7 +65,6 @@ class Core:
             target_label = instr.label
             if self.pipeline_registers[1].label not in label_map:
                 raise ValueError(f"Undefined label: {target_label}")
-            
         elif opcode == 'j':
             self.pipeline_registers[1].label = instr.label
             target_label = instr.label
