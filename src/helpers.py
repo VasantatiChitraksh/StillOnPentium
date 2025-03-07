@@ -15,20 +15,18 @@ def execute_data_instruction(data_instructions: DataInstruction, data_values: in
             address += 4
     return label_map
 
+
 def instruction_fetch(instructions: any, Cores: any, core_id: int, pc: int):
-    if not Cores[core_id].fetch_possible:
-        return
-    Cores[core_id].fetch_possible = False
     if(pc) >= len(instructions):
         return
     instr = instructions[pc]
+    # if core_id == 0:
+    #     print(pc,instr)
     Cores[core_id].pipeline_registers[0].instruction = instr
     Cores[core_id].pipeline_registers[0].isUsed = True
     if Cores[core_id].pipeline_registers[2].branch_taken:
         Cores[core_id].pc = Cores[core_id].pipeline_registers[2].pc
         Cores[core_id].pipeline_registers[0] = PipelineRegister()
-        if instr.opcode in ["add", "sub", "mul", "div", "sll", "slt", "slli", "addi", "la", "jal","lw"]:
-            Cores[core_id].register_active[int(Cores[core_id].pipeline_registers[1].rd[1:])] -= 1
         Cores[core_id].pipeline_registers[1] = PipelineRegister()
         
     else:

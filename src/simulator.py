@@ -29,7 +29,7 @@ def run_simulator(assembly_file: str):
         for core in cores:
             core.execute_instruction(core.pipeline_registers[0].instruction, mem, label_map)
             instruction_fetch(instructions, cores, core.core_id, core.pc)
-            # print(f"Core {core.core_id} Pipeline Registers: {core.pipeline_registers[0].isUsed} {core.pipeline_registers[1].branch_target} {core.pipeline_registers[2].branch_target} {core.pipeline_registers[3].isUsed}")
+
             fetch_possible = True
             if core.pc >= len(instructions):
                 fetch_possible = False
