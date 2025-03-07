@@ -1,4 +1,5 @@
 from data_instructions import DataInstruction
+from pipeline_register import PipelineRegister
 from instructions import Instruction
 from memory import Memory
 
@@ -25,5 +26,8 @@ def instruction_fetch(instructions: any, Cores: any, core_id: int, pc: int):
     Cores[core_id].pipeline_registers[0].isUsed = True
     if Cores[core_id].pipeline_registers[2].branch_taken:
         Cores[core_id].pc = Cores[core_id].pipeline_registers[2].pc
+        Cores[core_id].pipeline_registers[0] = PipelineRegister()
+        Cores[core_id].pipeline_registers[1] = PipelineRegister()
+        
     else:
         Cores[core_id].pc +=1
