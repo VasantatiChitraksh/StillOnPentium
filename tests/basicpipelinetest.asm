@@ -12,7 +12,7 @@ sw x2 4(x12)
 
 loop:
 addi x5 x5 2
-bne x3 x2 end
+bne cid x2 end
 addi x3 x2 1
 j loop
 end: addi x4 x0 5
