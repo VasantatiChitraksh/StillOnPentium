@@ -2,6 +2,7 @@ from instructions import Instruction
 from memory import Memory
 import simulator
 
+
 class Core:
     def __init__(self, core_id: int):
         self.core_id = core_id
@@ -19,9 +20,43 @@ class Core:
         self.execute_prev_done = True
         self.memory_remaining_time = 0
         self.mem_done = True
+        self.isDF = False
         self.latency_map = {}
 
-    def instr_decode_reg_fetch(self, instr: Instruction,fetch_ins):
+    def get_data_from_EX_MEM(self, rd) -> any:
+        if not self.EX_MEM:
+            return "False"
+        if len(self.EX_MEM) == 1:
+            return "False"
+        if rd == self.EX_MEM[1] and self.EX_MEM[0] not in ["lw", "la"]:
+            return self.EX_MEM[2]
+        elif rd == self.EX_MEM[1] and self.EX_MEM[0] in ["lw", "la"]:
+            return 2
+        return "False"
+
+    def get_data_from_MEM_WB(self, rd) -> any:
+        if not self.MEM_WB:
+            return "False"
+        if rd == self.MEM_WB[1]:
+            return self.MEM_WB[2]
+        return "False"
+
+    def get_forwarded_data(self, rd)->any:
+        if not self.isDF:
+            return "False"
+        data_from_EX_MEM = self.get_data_from_EX_MEM(rd)
+        if data_from_EX_MEM == 2:
+            return "False"
+        elif data_from_EX_MEM == "False":
+            data_from_MEM_WB = self.get_data_from_MEM_WB(rd)
+            if data_from_MEM_WB == "False":
+                return "False"
+            else:
+                return data_from_MEM_WB
+        else:
+            return data_from_EX_MEM
+    
+    def instr_decode_reg_fetch(self, instr: Instruction, fetch_ins):
         if self.execute_prev_done == False:
             return
         if not self.IF_ID:
@@ -38,53 +73,133 @@ class Core:
             rs2_id = int(instr.rs2[1:])
             # print("RS1 ID:Value --- RS2 ID:Value",rs1_id,self.register_active[rs1_id],rs2_id,self.register_active[rs2_id])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
-                self.stall_count += 1
-                return
+                if self.register_active[rs1_id] > 0 and self.register_active[rs2_id] > 0:
+                    # print("Stalling due to rs1 and rs2",instr.rs1,instr.rs2)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    rs2_fwd_data = self.get_forwarded_data(instr.rs2)
+                    if rs1_fwd_data == "False" or rs2_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(rs2_fwd_data)
+
+                elif self.register_active[rs1_id] > 0:
+                    # print("Stalling due to rs1",instr.rs1)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    if rs1_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(self.get_register_value(instr.rs2))
+                    
+                elif self.register_active[rs2_id] > 0:
+                    # print("Stalling due to rs2",instr.rs2)
+                    rs2_fwd_data = self.get_forwarded_data(instr.rs2)
+                    if rs2_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(self.get_register_value(instr.rs1))
+                        decoded_ready.append(rs2_fwd_data)
+            else:
+                decoded_ready.append(self.get_register_value(instr.rs1))
+                decoded_ready.append(self.get_register_value(instr.rs2))
             self.register_active[rd_id] += 1
-            decoded_ready.append(self.get_register_value(instr.rs1))
-            decoded_ready.append(self.get_register_value(instr.rs2))
 
         elif opcode in ["addi", "jalr", "slli"]:
             decoded_ready.append(instr.rd)
             rd_id = int(instr.rd[1:])
             rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0:
-                self.stall_count += 1
-                return
+                if self.register_active[rs1_id] > 0:
+                    # print("Stalling due to rs1",instr.rs1)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    if rs1_fwd_data == 2:
+                        self.stall_count += 1
+                        return
+                    elif rs1_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(instr.immediate)
+            else:
+                decoded_ready.append(self.get_register_value(instr.rs1))
+                decoded_ready.append(instr.immediate)
             self.register_active[rd_id] += 1
             # print("ID:Value",instr.rd,self.get_register_value(instr.rd))
-            decoded_ready.append(self.get_register_value(instr.rs1))
-            decoded_ready.append(instr.immediate)
 
         elif opcode == "lw":
             rd_id = int(instr.rd[1:])
             decoded_ready.append(instr.rd)
-            # print("Decoded Offset (instr_decode_reg_fetch):", instr.immediate) 
+            # print("Decoded Offset (instr_decode_reg_fetch):", instr.immediate)
             decoded_ready.append(int(instr.immediate))
             rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0:
-                self.stall_count += 1
-                return
+                if self.register_active[rs1_id] > 0:
+                    # print("Stalling due to rs1",instr.rs1)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    if rs1_fwd_data == 2:
+                        self.stall_count += 1
+                        return
+                    elif rs1_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+            else:
+                decoded_ready.append(self.get_register_value(instr.rs1))
             self.register_active[rd_id] += 1
             # print(self.get_register_value(instr.rs1))
-            decoded_ready.append(self.get_register_value(instr.rs1))
 
         elif opcode == "sw":
             rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
-                self.stall_count += 1
-                return
+                if self.register_active[rs1_id] > 0 and self.register_active[rs2_id] > 0:
+                    # print("Stalling due to rs1 and rs2",instr.rs1,instr.rs2)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    rs2_fwd_data = self.get_forwarded_data(instr.rs2)
+                    if rs1_fwd_data == "False" or rs2_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(instr.immediate)
+                        decoded_ready.append(rs2_fwd_data)
+                elif self.register_active[rs1_id] > 0:
+                    # print("Stalling due to rs1",instr.rs1)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    if rs1_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(instr.immediate)
+                        decoded_ready.append(self.get_register_value(instr.rs2))
+                elif self.register_active[rs2_id] > 0:
+                    # print("Stalling due to rs2",instr.rs2)
+                    rs2_fwd_data = self.get_forwarded_data(instr.rs2)
+                    if rs2_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(self.get_register_value(instr.rs1))
+                        decoded_ready.append(instr.immediate)
+                        decoded_ready.append(rs2_fwd_data)
             # For sw, store the source value, then immediate, then base register value:
-            src_val = self.get_register_value(instr.rs2)
-            imm_val = int(instr.immediate)
-            base_val = self.get_register_value(instr.rs1)  # Capture the base now
-            decoded_ready.append(src_val)
-            decoded_ready.append(imm_val)
-            decoded_ready.append(base_val)
+            else:
+                src_val = self.get_register_value(instr.rs2)
+                imm_val = int(instr.immediate)
+                base_val = self.get_register_value(
+                    instr.rs1)  # Capture the base now
+                decoded_ready.append(src_val)
+                decoded_ready.append(imm_val)
+                decoded_ready.append(base_val)
             # print("Decoded Offset (instr_decode_reg_fetch):", int(instr.immediate))
             # print("After decoding sent to ex stage", decoded_ready)
-
 
         elif opcode in ["bne", "bge", "beq"]:
             rs2_id = int(instr.rs2[1:])
@@ -93,11 +208,41 @@ class Core:
             else:
                 rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
-                self.stall_count += 1
-                return
-            decoded_ready.append(self.get_register_value(instr.rs1))
-            decoded_ready.append(self.get_register_value(instr.rs2))
-            decoded_ready.append(instr.label)
+                if self.register_active[rs1_id] > 0 and self.register_active[rs2_id] > 0:
+                    # print("Stalling due to rs1 and rs2",instr.rs1,instr.rs2)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    rs2_fwd_data = self.get_forwarded_data(instr.rs2)
+                    if rs1_fwd_data == "False" or rs2_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(rs2_fwd_data)
+                        decoded_ready.append(instr.label)
+                elif self.register_active[rs1_id] > 0:
+                    # print("Stalling due to rs1",instr.rs1)
+                    rs1_fwd_data = self.get_forwarded_data(instr.rs1)
+                    if rs1_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(rs1_fwd_data)
+                        decoded_ready.append(self.get_register_value(instr.rs2))
+                        decoded_ready.append(instr.label)
+                elif self.register_active[rs2_id] > 0:
+                    # print("Stalling due to rs2",instr.rs2)
+                    rs2_fwd_data = self.get_forwarded_data(instr.rs2)
+                    if rs2_fwd_data == "False":
+                        self.stall_count += 1
+                        return
+                    else:
+                        decoded_ready.append(self.get_register_value(instr.rs1))
+                        decoded_ready.append(rs2_fwd_data)
+                        decoded_ready.append(instr.label)
+            else:
+                decoded_ready.append(self.get_register_value(instr.rs1))
+                decoded_ready.append(self.get_register_value(instr.rs2))
+                decoded_ready.append(instr.label)
 
         elif opcode in ["la", "jal"]:
             rd_id = int(instr.rd[1:])
@@ -109,7 +254,7 @@ class Core:
             decoded_ready.append(instr.label)
 
         self.ID_EX = decoded_ready
-        if self.ID_EX[0] in ["lw","sw","la"]:
+        if self.ID_EX[0] in ["lw", "sw", "la"]:
             self.execution_time_remaining = 0
         elif self.ID_EX[0] in self.latency_map:
             self.execution_time_remaining = self.latency_map[self.ID_EX[0]]-1
@@ -117,7 +262,7 @@ class Core:
             self.execution_time_remaining = 0
         self.execute_prev_done = False
         # # print("making if true",id(simulator.Simulator.fetch_ins),simulator.Simulator.fetch_ins)
-        simulator.Simulator.fetch_ins[self.core_id]=True
+        simulator.Simulator.fetch_ins[self.core_id] = True
         # # print(" after making if true",id(fetch_ins),fetch_ins)
         self.IF_ID = None
 
@@ -128,11 +273,11 @@ class Core:
 
         if not self.mem_done:
             return
-        
+
         if self.execution_time_remaining > 0:
             self.execution_time_remaining -= 1
             return
-        
+
         opcode = EX_Stage[0]
         # print("EX:", EX_Stage)
         execute_ready = []
@@ -177,14 +322,13 @@ class Core:
             execute_ready.append(EX_Stage[1])
             execute_ready.append(effective_addr)
 
-
         elif opcode in ["bne", "bge", "beq"]:
             label = EX_Stage[3]
             if (opcode == "bne" and int(EX_Stage[1]) != int(EX_Stage[2])) or \
                (opcode == "bge" and int(EX_Stage[1]) >= int(EX_Stage[2])) or \
                (opcode == "beq" and int(EX_Stage[1]) == int(EX_Stage[2])):
                 new_pc = self.labels_map[label]
-                simulator.Simulator.new_pc[self.core_id] = new_pc 
+                simulator.Simulator.new_pc[self.core_id] = new_pc
                 simulator.Simulator.pc_changed[self.core_id] = True
 
         elif opcode in ["la", "jal"]:
@@ -196,7 +340,7 @@ class Core:
                 execute_ready.append(destination_addr)
             elif opcode == "jal":
                 new_pc = self.labels_map[label]
-                simulator.Simulator.new_pc[self.core_id] = new_pc 
+                simulator.Simulator.new_pc[self.core_id] = new_pc
                 simulator.Simulator.pc_changed[self.core_id] = True
                 out = self.pc + 1
                 execute_ready.append(EX_Stage[1])
@@ -211,13 +355,13 @@ class Core:
         self.ID_EX = []
         self.execute_prev_done = True
         self.mem_done = False
-        if opcode in ["lw","sw","la"] and opcode in self.latency_map:
+        if opcode in ["lw", "sw", "la"] and opcode in self.latency_map:
             self.memory_remaining_time = self.latency_map[opcode]-1
         else:
             self.memory_remaining_time = 0
         self.EX_MEM = execute_ready
 
-    def memory_access(self,memory):
+    def memory_access(self, memory):
         MEM_Stage = self.EX_MEM
         if not MEM_Stage:
             return
@@ -264,13 +408,13 @@ class Core:
 
         self.MEM_WB = []
 
-    def execute_instruction(self,memory,fetch_ins):
+    def execute_instruction(self, memory, fetch_ins):
         # print("---new_cycle--- core id:",self.core_id)
         self.write_back()
         self.memory_access(memory)
-        self.execute()    
+        self.execute()
         if self.IF_ID is not None:
-            self.instr_decode_reg_fetch(self.IF_ID,fetch_ins)
+            self.instr_decode_reg_fetch(self.IF_ID, fetch_ins)
 
     def get_register_value(self, reg: str) -> int:
         if reg == "cid":

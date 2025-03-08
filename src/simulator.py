@@ -13,6 +13,7 @@ class Simulator:
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
         self.cores = [core.Core(core_id=i) for i in range(4)]  # Initialize cores
         self.latency_config = {}
+        self.data_fwd_on = input("Do you want to enable data forwarding? (y/n): ")
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
@@ -65,6 +66,10 @@ class Simulator:
             core.labels_map.update(label_map)
             core.labels_map.update(data_label_map)
             core.latency_map = self.latency_config
+            if self.data_fwd_on == 'y':
+                core.isDF = True
+            else:
+                core.isDF = False
 
         cycle = 0
         pipeline_active = True
