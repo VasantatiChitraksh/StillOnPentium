@@ -40,4 +40,5 @@ next_iter:addi x4,x4, 1          # increment i
     j loop1
     
 out:
-    nop
+    add x0 x0 x0
+    add x0 x0 x0 
