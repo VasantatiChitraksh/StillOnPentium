@@ -31,6 +31,7 @@ class Core:
             rs2_id = int(instr.rs2[1:])
             print("RS1 ID:Value --- RS2 ID:Value",rs1_id,self.register_active[rs1_id],rs2_id,self.register_active[rs2_id])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
+                self.stall_count += 1
                 return
             self.register_active[rd_id] += 1
             decoded_ready.append(self.get_register_value(instr.rs1))
@@ -41,6 +42,7 @@ class Core:
             rd_id = int(instr.rd[1:])
             rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0:
+                self.stall_count += 1
                 return
             self.register_active[rd_id] += 1
             print("ID:Value",instr.rd,self.get_register_value(instr.rd))
@@ -54,6 +56,7 @@ class Core:
             decoded_ready.append(int(instr.immediate))
             rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0:
+                self.stall_count += 1
                 return
             self.register_active[rd_id] += 1
             print(self.get_register_value(instr.rs1))
@@ -63,6 +66,7 @@ class Core:
             rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
+                self.stall_count += 1
                 return
             # For sw, store the source value, then immediate, then base register value:
             src_val = self.get_register_value(instr.rs2)
@@ -76,9 +80,13 @@ class Core:
 
 
         elif opcode in ["bne", "bge", "beq"]:
-            rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
+            if instr.rs1 == "cid":
+                rs1_id = rs2_id
+            else:
+                rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
+                self.stall_count += 1
                 return
             decoded_ready.append(self.get_register_value(instr.rs1))
             decoded_ready.append(self.get_register_value(instr.rs2))
@@ -193,14 +201,14 @@ class Core:
 
         if opcode == "lw":
             effective_addr = int(MEM_Stage[2])
-            memory_value = memory.read_word(effective_addr, self.core_id)
+            memory_value = memory.read_word(effective_addr)
             memory_ready.append(MEM_Stage[1])
             memory_ready.append(memory_value)
             self.MEM_WB = memory_ready
         elif opcode == "sw":
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
-            memory.write_word(effective_addr, value, self.core_id)
+            memory.write_word(effective_addr, value)
             self.MEM_WB = memory_ready
         else:
             self.MEM_WB = MEM_Stage
@@ -225,7 +233,7 @@ class Core:
         self.MEM_WB = []
 
     def execute_instruction(self,memory,fetch_ins):
-        print("---new_cycle---")
+        print("---new_cycle--- core id:",self.core_id)
         self.write_back()
         self.memory_access(memory)
         self.execute()    
@@ -233,6 +241,8 @@ class Core:
             self.instr_decode_reg_fetch(self.IF_ID,fetch_ins)
 
     def get_register_value(self, reg: str) -> int:
+        if reg == "cid":
+            return self.core_id
         index = int(reg[1:])
         return self.registers[index]
 

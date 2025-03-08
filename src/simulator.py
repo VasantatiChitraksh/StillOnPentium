@@ -20,35 +20,36 @@ class Simulator:
             if data_instr.label:
                 label_map[data_instr.label] = address
             for value in data_instr.values:
-                memory.write_word(address, value, 0)
+                memory.write_word(address, value)
                 address += 4
         return label_map
 
-    def instruction_fetch(self, instructions, core_id, pc):
-        if not self.fetch_ins[core_id]:
-            return    
+    def instruction_fetch(self, instructions):
+        for i in range(1):
+            if not self.fetch_ins[i]:
+                continue    
         
-        self.fetch_ins[core_id] = False
-        # if core_id == 0:
-            # print("Writing to ID:", instructions[pc])
-        if self.pc_changed[core_id]:
-            self.cores[core_id].pc = self.new_pc[core_id]
-            self.pc_changed[core_id] = False
-            self.cores[core_id].IF_ID = None
-            rd = self.cores[core_id].ID_EX[1]
-            opcode = self.cores[core_id].ID_EX[0]
-            if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw"]:
-                rd_id = int(rd[1:])
-                self.cores[core_id].register_active[rd_id] -= 1
-            self.cores[core_id].ID_EX = []
-            self.fetch_ins[core_id] = True
-        else:
-            if pc >= len(instructions):
-                return
-            self.cores[core_id].IF_ID = instructions[pc]
-            self.cores[core_id].pc += 1
-        if pc >= len(instructions):
-            return
+            self.fetch_ins[i] = False
+            # if core_id == 0:
+                # print("Writing to ID:", instructions[pc])
+            if self.pc_changed[i]:
+                self.cores[i].pc = self.new_pc[i]
+                self.pc_changed[i] = False
+                self.cores[i].IF_ID = None
+                rd = self.cores[i].ID_EX[1]
+                opcode = self.cores[i].ID_EX[0]
+                if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw"]:
+                    rd_id = int(rd[1:])
+                    self.cores[i].register_active[rd_id] -= 1
+                self.cores[i].ID_EX = []
+                self.fetch_ins[i] = True
+            else:
+                if self.cores[i].pc >= len(instructions):
+                    continue
+                self.cores[i].IF_ID = instructions[self.cores[i].pc]
+                self.cores[i].pc += 1
+            if self.cores[i].pc >= len(instructions):
+                continue
 
     def run_simulator(self, assembly_file: str):
         def decimal_to_hex(n: int) -> str:
@@ -66,14 +67,14 @@ class Simulator:
         pipeline_active = True
 
         while pipeline_active:
-            for i in range(1):
+            for i in range(4):
                 core=self.cores[i]
                 core.execute_instruction(self.mem,self.fetch_ins)
-                self.instruction_fetch(instructions, core.core_id, core.pc)
+            self.instruction_fetch(instructions)
 
-                fetch_possible = True
-                if core.pc >= len(instructions):
-                    fetch_possible = False
+            fetch_possible = True
+            if self.cores[0].pc >= len(instructions):
+                fetch_possible = False
 
             # Check if pipeline should stop
             cycle += 1
@@ -82,7 +83,13 @@ class Simulator:
 
         # Print simulation results
         print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
-        print(f"Simulation done in {cycle * 4} cycles (No Parallelism).")
+        print(f"Simulation done in {cycle * 4} cycles (No Parallelism).\n")
+        print(f"No of Stalls in each core:")
+        total_stall = 0
+        for core in self.cores:
+            print(f"Core ID:{core.core_id} | No Of Stalls: {core.stall_count}")
+            total_stall += core.stall_count
+        print(f"Total No of Stalls are:{total_stall}\n")
         for i, core in enumerate(self.cores):
             print(f"Core {i} registers: {core.registers}")
 
@@ -92,11 +99,3 @@ class Simulator:
             addresses = [
                 f"{decimal_to_hex(i*4)}: {self.mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
             print("  |  ".join(addresses))
-
-# if __name__ == '__main__':
-#     if len(sys.argv) != 2:
-#         print("Usage: python simulator.py <assembly_file>")
-#     else:
-#         assembly_file = sys.argv[1]
-#         simulator = Simulator()
-#         simulator.run_simulator(assembly_file)
