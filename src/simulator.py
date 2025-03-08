@@ -12,6 +12,7 @@ class Simulator:
     def __init__(self):
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
         self.cores = [core.Core(core_id=i) for i in range(4)]  # Initialize cores
+        self.latency_config = {}
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
@@ -25,7 +26,7 @@ class Simulator:
         return label_map
 
     def instruction_fetch(self, instructions):
-        for i in range(1):
+        for i in range(4):
             if not self.fetch_ins[i]:
                 continue    
         
@@ -35,6 +36,7 @@ class Simulator:
             if self.pc_changed[i]:
                 self.cores[i].pc = self.new_pc[i]
                 self.pc_changed[i] = False
+                self.cores[i].execute_prev_done = True
                 self.cores[i].IF_ID = None
                 rd = self.cores[i].ID_EX[1]
                 opcode = self.cores[i].ID_EX[0]
@@ -62,6 +64,7 @@ class Simulator:
         for core in self.cores:
             core.labels_map.update(label_map)
             core.labels_map.update(data_label_map)
+            core.latency_map = self.latency_config
 
         cycle = 0
         pipeline_active = True

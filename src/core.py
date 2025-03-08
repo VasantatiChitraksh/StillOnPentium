@@ -15,11 +15,18 @@ class Core:
         self.EX_MEM = []
         self.MEM_WB = []
         self.labels_map = {}  # Added to store label mappings
+        self.execution_time_remaining = 0
+        self.execute_prev_done = True
+        self.memory_remaining_time = 0
+        self.mem_done = True
+        self.latency_map = {}
 
     def instr_decode_reg_fetch(self, instr: Instruction,fetch_ins):
+        if self.execute_prev_done == False:
+            return
         if not self.IF_ID:
             return
-        print("Decoding:", instr)
+        # print("Decoding:", instr)
         opcode = instr.opcode
         decoded_ready = []
         decoded_ready.append(opcode)
@@ -29,7 +36,7 @@ class Core:
             rd_id = int(instr.rd[1:])
             rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
-            print("RS1 ID:Value --- RS2 ID:Value",rs1_id,self.register_active[rs1_id],rs2_id,self.register_active[rs2_id])
+            # print("RS1 ID:Value --- RS2 ID:Value",rs1_id,self.register_active[rs1_id],rs2_id,self.register_active[rs2_id])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
                 self.stall_count += 1
                 return
@@ -45,21 +52,21 @@ class Core:
                 self.stall_count += 1
                 return
             self.register_active[rd_id] += 1
-            print("ID:Value",instr.rd,self.get_register_value(instr.rd))
+            # print("ID:Value",instr.rd,self.get_register_value(instr.rd))
             decoded_ready.append(self.get_register_value(instr.rs1))
             decoded_ready.append(instr.immediate)
 
         elif opcode == "lw":
             rd_id = int(instr.rd[1:])
             decoded_ready.append(instr.rd)
-            print("Decoded Offset (instr_decode_reg_fetch):", instr.immediate) 
+            # print("Decoded Offset (instr_decode_reg_fetch):", instr.immediate) 
             decoded_ready.append(int(instr.immediate))
             rs1_id = int(instr.rs1[1:])
             if self.register_active[rs1_id] > 0:
                 self.stall_count += 1
                 return
             self.register_active[rd_id] += 1
-            print(self.get_register_value(instr.rs1))
+            # print(self.get_register_value(instr.rs1))
             decoded_ready.append(self.get_register_value(instr.rs1))
 
         elif opcode == "sw":
@@ -75,8 +82,8 @@ class Core:
             decoded_ready.append(src_val)
             decoded_ready.append(imm_val)
             decoded_ready.append(base_val)
-            print("Decoded Offset (instr_decode_reg_fetch):", int(instr.immediate))
-            print("After decoding sent to ex stage", decoded_ready)
+            # print("Decoded Offset (instr_decode_reg_fetch):", int(instr.immediate))
+            # print("After decoding sent to ex stage", decoded_ready)
 
 
         elif opcode in ["bne", "bge", "beq"]:
@@ -102,9 +109,16 @@ class Core:
             decoded_ready.append(instr.label)
 
         self.ID_EX = decoded_ready
-        # print("making if true",id(simulator.Simulator.fetch_ins),simulator.Simulator.fetch_ins)
+        if self.ID_EX[0] in ["lw","sw","la"]:
+            self.execution_time_remaining = 0
+        elif self.ID_EX[0] in self.latency_map:
+            self.execution_time_remaining = self.latency_map[self.ID_EX[0]]-1
+        else:
+            self.execution_time_remaining = 0
+        self.execute_prev_done = False
+        # # print("making if true",id(simulator.Simulator.fetch_ins),simulator.Simulator.fetch_ins)
         simulator.Simulator.fetch_ins[self.core_id]=True
-        # print(" after making if true",id(fetch_ins),fetch_ins)
+        # # print(" after making if true",id(fetch_ins),fetch_ins)
         self.IF_ID = None
 
     def execute(self):
@@ -112,13 +126,21 @@ class Core:
         if not EX_Stage:
             return
 
+        if not self.mem_done:
+            return
+        
+        if self.execution_time_remaining > 0:
+            self.execution_time_remaining -= 1
+            return
+        
         opcode = EX_Stage[0]
-        print("EX:", EX_Stage)
+        # print("EX:", EX_Stage)
         execute_ready = []
         execute_ready.append(opcode)
 
         if opcode in ["add", "sub", "mul"]:
             execute_ready.append(EX_Stage[1])
+            out = 0
             if opcode == "add":
                 out = int(EX_Stage[2]) + int(EX_Stage[3])
             elif opcode == "sub":
@@ -136,7 +158,7 @@ class Core:
             elif opcode == "jalr":
                 offset = int(EX_Stage[3])
                 if offset % 4 != 0:
-                    print("Offset should be a multiple of 4")
+                    # print("Offset should be a multiple of 4")
                     exit()
                 new_pc = int(EX_Stage[2]) + offset
                 simulator.Simulator.new_pc[self.core_id] = new_pc
@@ -146,10 +168,10 @@ class Core:
 
         elif opcode in ["lw", "sw"]:
             offset = int(EX_Stage[2])
-            print("Offset Before Execution:", offset)
+            # print("Offset Before Execution:", offset)
             if offset % 4 != 0:
-                print(offset)
-                print("Offset should be a multiple of 4")
+                # print(offset)
+                # print("Offset should be a multiple of 4")
                 exit()
             effective_addr = int(EX_Stage[3]) + offset
             execute_ready.append(EX_Stage[1])
@@ -176,7 +198,7 @@ class Core:
                 new_pc = self.labels_map[label]
                 simulator.Simulator.new_pc[self.core_id] = new_pc 
                 simulator.Simulator.pc_changed[self.core_id] = True
-                out = self.pc + 4
+                out = self.pc + 1
                 execute_ready.append(EX_Stage[1])
                 execute_ready.append(out)
 
@@ -187,6 +209,12 @@ class Core:
             simulator.Simulator.pc_changed[self.core_id] = True
 
         self.ID_EX = []
+        self.execute_prev_done = True
+        self.mem_done = False
+        if opcode in ["lw","sw","la"] and opcode in self.latency_map:
+            self.memory_remaining_time = self.latency_map[opcode]-1
+        else:
+            self.memory_remaining_time = 0
         self.EX_MEM = execute_ready
 
     def memory_access(self,memory):
@@ -194,8 +222,11 @@ class Core:
         if not MEM_Stage:
             return
 
+        if self.memory_remaining_time > 0:
+            self.memory_remaining_time -= 1
+            return
         opcode = MEM_Stage[0]
-        print("MEM:", MEM_Stage)
+        # print("MEM:", MEM_Stage)
         memory_ready = []
         memory_ready.append(opcode)
 
@@ -213,6 +244,7 @@ class Core:
         else:
             self.MEM_WB = MEM_Stage
         self.EX_MEM = []
+        self.mem_done = True
         return
 
     def write_back(self):
@@ -221,19 +253,19 @@ class Core:
             return
 
         opcode = WB_Stage[0]
-        print("WB:", WB_Stage)
+        # print("WB:", WB_Stage)
 
         if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal"]:
             value = int(WB_Stage[2])
             reg_id = int(WB_Stage[1][1:])
-            print(reg_id)
+            # print(reg_id)
             self.set_register_value(WB_Stage[1], value)
             self.register_active[reg_id] -= 1
 
         self.MEM_WB = []
 
     def execute_instruction(self,memory,fetch_ins):
-        print("---new_cycle--- core id:",self.core_id)
+        # print("---new_cycle--- core id:",self.core_id)
         self.write_back()
         self.memory_access(memory)
         self.execute()    
