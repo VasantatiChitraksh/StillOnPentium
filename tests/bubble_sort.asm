@@ -35,4 +35,5 @@ if:
     sw x17,0(x21)
     j loop2
 end:
-    nop
+    add x0 x0 x0
+    

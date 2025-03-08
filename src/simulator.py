@@ -1,64 +1,102 @@
 import sys
-import numpy as np
-
 from memory import Memory
-from core import Core
-from asm_parser import parse_assembly_file, DataInstruction
-from helpers import *
+import core
+from asm_parser import parse_assembly_file
 
+class Simulator:
 
-def run_simulator(assembly_file: str):
-    def decimal_to_hex(n: int) -> str:
-        return f"0x{n:x}"
+    pc_changed = [False] * 4
+    new_pc = [0] * 4
+    clock = 0
+    fetch_ins = [True] * 4
+    def __init__(self):
+        self.mem = Memory(size_in_bytes=4096)  # Initialize memory
+        self.cores = [core.Core(core_id=i) for i in range(4)]  # Initialize cores
 
-    instructions, label_map, data_instructions, data_values = parse_assembly_file(
-        assembly_file)
+    def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
+        label_map = {}
+        address = 1024 - data_values * 4
+        for data_instr in data_instructions:
+            if data_instr.label:
+                label_map[data_instr.label] = address
+            for value in data_instr.values:
+                memory.write_word(address, value, 0)
+                address += 4
+        return label_map
 
-    # The parsed file is creating a instruction list, label map, data instruction list and data values, this serves as the common memory for all instruction as they are stored.
-    mem = Memory(size_in_bytes=4096)
-    cores = [Core(core_id=i) for i in range(4)]
-    data_label_map = execute_data_instruction(
-        data_instructions, data_values, mem)
-    for core in cores:
-        label_map.update(data_label_map)
+    def instruction_fetch(self, instructions, core_id, pc):
+        if not self.fetch_ins[core_id]:
+            return    
+        
+        self.fetch_ins[core_id] = False
+        # if core_id == 0:
+            # print("Writing to ID:", instructions[pc])
+        if self.pc_changed[core_id]:
+            self.cores[core_id].pc = self.new_pc[core_id]
+            self.pc_changed[core_id] = False
+            self.cores[core_id].IF_ID = None
+            rd = self.cores[core_id].ID_EX[1]
+            opcode = self.cores[core_id].ID_EX[0]
+            if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw"]:
+                rd_id = int(rd[1:])
+                self.cores[core_id].register_active[rd_id] -= 1
+            self.cores[core_id].ID_EX = []
+            self.fetch_ins[core_id] = True
+        else:
+            if pc >= len(instructions):
+                return
+            self.cores[core_id].IF_ID = instructions[pc]
+            self.cores[core_id].pc += 1
+        if pc >= len(instructions):
+            return
 
-    cycle = 0
+    def run_simulator(self, assembly_file: str):
+        def decimal_to_hex(n: int) -> str:
+            return f"0x{n:x}"
 
-    pipeline_active = True
-    while pipeline_active:
-        for core in cores:
-            core.execute_instruction(core.pipeline_registers[0].instruction, mem, label_map)
-            instruction_fetch(instructions, cores, core.core_id, core.pc)
+        instructions, label_map, data_instructions, data_values = parse_assembly_file(assembly_file)
 
-            fetch_possible = True
-            if core.pc >= len(instructions):
-                fetch_possible = False
+        # Initialize memory and cores
+        data_label_map = self.execute_data_instruction(data_instructions, data_values, self.mem)
+        for core in self.cores:
+            core.labels_map.update(label_map)
+            core.labels_map.update(data_label_map)
 
-        for core in cores:
-            if not fetch_possible and not core.pipeline_registers[0].isUsed and not core.pipeline_registers[1].isUsed and not core.pipeline_registers[2].isUsed and not core.pipeline_registers[3].isUsed:
+        cycle = 0
+        pipeline_active = True
+
+        while pipeline_active:
+            for i in range(1):
+                core=self.cores[i]
+                core.execute_instruction(self.mem,self.fetch_ins)
+                self.instruction_fetch(instructions, core.core_id, core.pc)
+
+                fetch_possible = True
+                if core.pc >= len(instructions):
+                    fetch_possible = False
+
+            # Check if pipeline should stop
+            cycle += 1
+            if not fetch_possible and all(not core.IF_ID and not core.ID_EX and not core.EX_MEM and not core.MEM_WB for core in self.cores):
                 pipeline_active = False
-        cycle += 1
 
+        # Print simulation results
+        print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
+        print(f"Simulation done in {cycle * 4} cycles (No Parallelism).")
+        for i, core in enumerate(self.cores):
+            print(f"Core {i} registers: {core.registers}")
 
-    print(f"Simulation completed in {cycle} cycles.")
-    print(f"Simulation done in {cycle} cycles")
-    for i, core in enumerate(cores):
-        print(f"Core {i} registers: {core.registers}")
+        print("\nMemory Dump:")
 
-    print("\nMemory Dump:")
+        for idx in range(0, 1024, 6):
+            addresses = [
+                f"{decimal_to_hex(i*4)}: {self.mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
+            print("  |  ".join(addresses))
 
-    for idx in range(0, 1024, 6):
-        addresses = [
-            f"{decimal_to_hex(i*4)}: {mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
-        print("  |  ".join(addresses))
-
-    print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
-    print(f"Simulation done in {cycle*4} cycles (No Parallelism).")
-
-
-if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("Usage: python simulator.py <assembly_file>")
-    else:
-        assembly_file = sys.argv[1]
-        run_simulator(assembly_file)
+# if __name__ == '__main__':
+#     if len(sys.argv) != 2:
+#         print("Usage: python simulator.py <assembly_file>")
+#     else:
+#         assembly_file = sys.argv[1]
+#         simulator = Simulator()
+#         simulator.run_simulator(assembly_file)
