@@ -7,14 +7,14 @@ class Memory:
     def read_word(self, address: int) -> int:
         if address % 4 != 0 or address < 0 or address >= 1024:
             # Check for valid address
-            raise ValueError(f"Invalid address requested : {address} ")
+            raise ValueError(f"Invalid address requested : {address*4} max is 4095 4Kb")
         index = address//4
         return self.word[index]
 
     def write_word(self, address: int, value: int):
         if address % 4 != 0 or address < 0 or address >= 1024:
             raise ValueError(
-                f"Invalid address requested : {address}")
+                f"Invalid address requested : {address*4} max is 4095 4Kb")
         index = address//4
         self.word[index] = value
 

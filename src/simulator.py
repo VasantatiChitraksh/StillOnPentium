@@ -54,11 +54,12 @@ class Simulator:
                 self.pc_changed[i] = False
                 self.cores[i].execute_prev_done = True
                 self.cores[i].IF_ID = None
-                rd = self.cores[i].ID_EX[1]
-                opcode = self.cores[i].ID_EX[0]
-                if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw"]:
-                    rd_id = int(rd[1:])
-                    self.cores[i].register_active[rd_id] -= 1
+                if self.cores[i].ID_EX:
+                    rd = self.cores[i].ID_EX[1]
+                    opcode = self.cores[i].ID_EX[0]
+                    if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw"]:
+                        rd_id = int(rd[1:])
+                        self.cores[i].register_active[rd_id] -= 1
                 self.cores[i].ID_EX = []
                 self.fetch_ins[i] = True
                 continue
@@ -119,7 +120,6 @@ class Simulator:
         # Print simulation Statistics
         print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
         print(f"Simulation done in {cycle * 4} cycles (No Parallelism).\n")
-        print(f"Total no of structural stalls:{self.structural_stall}")
         print("No of Stalls in each core:")
         total_stall = 0
         for core in self.cores:

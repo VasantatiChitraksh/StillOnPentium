@@ -6,7 +6,7 @@ import simulator
 class Core:
     def __init__(self, core_id: int):
         self.core_id = core_id
-        self.registers = [0] * 33
+        self.registers = [0] * 33 #33 register is the special register which has core_id
         self.registers[32] = self.core_id
         self.register_active = [0] * 33
         self.pc = 0

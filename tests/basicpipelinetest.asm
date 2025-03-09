@@ -1,7 +1,4 @@
-addi x2 x0 1
-
-bne cid x2 end
-addi x11 x0 5
-
-end:
-addi x12 x0 3
+bne cid x0 label
+addi x5 x6 5
+label:
+addi x8 x9 8
