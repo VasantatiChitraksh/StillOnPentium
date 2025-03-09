@@ -6,8 +6,9 @@ import simulator
 class Core:
     def __init__(self, core_id: int):
         self.core_id = core_id
-        self.registers = [0] * 32
-        self.register_active = [0] * 32
+        self.registers = [0] * 33
+        self.registers[32] = self.core_id
+        self.register_active = [0] * 33
         self.pc = 0
         self.instruction_count = 0
         self.stall_count = 0
@@ -31,7 +32,7 @@ class Core:
         if rd == self.EX_MEM[1] and self.EX_MEM[0] not in ["lw", "la"]:
             return self.EX_MEM[2]
         elif rd == self.EX_MEM[1] and self.EX_MEM[0] in ["lw", "la"]:
-            return 2
+            return "False"
         return "False"
 
     def get_data_from_MEM_WB(self, rd) -> any:
@@ -45,7 +46,7 @@ class Core:
         if not self.isDF:
             return "False"
         data_from_EX_MEM = self.get_data_from_EX_MEM(rd)
-        if data_from_EX_MEM == 2:
+        if data_from_EX_MEM == "False":
             return "False"
         elif data_from_EX_MEM == "False":
             data_from_MEM_WB = self.get_data_from_MEM_WB(rd)
@@ -67,6 +68,7 @@ class Core:
         decoded_ready.append(opcode)
 
         if opcode in ["add", "sub", "mul"]:
+            print(instr)
             decoded_ready.append(instr.rd)
             rd_id = int(instr.rd[1:])
             rs1_id = int(instr.rs1[1:])
@@ -85,7 +87,6 @@ class Core:
                         decoded_ready.append(rs2_fwd_data)
 
                 elif self.register_active[rs1_id] > 0:
-                    # print("Stalling due to rs1",instr.rs1)
                     rs1_fwd_data = self.get_forwarded_data(instr.rs1)
                     if rs1_fwd_data == "False":
                         self.stall_count += 1
@@ -116,7 +117,7 @@ class Core:
                 if self.register_active[rs1_id] > 0:
                     # print("Stalling due to rs1",instr.rs1)
                     rs1_fwd_data = self.get_forwarded_data(instr.rs1)
-                    if rs1_fwd_data == 2:
+                    if rs1_fwd_data == "False":
                         self.stall_count += 1
                         return
                     elif rs1_fwd_data == "False":
@@ -141,7 +142,7 @@ class Core:
                 if self.register_active[rs1_id] > 0:
                     # print("Stalling due to rs1",instr.rs1)
                     rs1_fwd_data = self.get_forwarded_data(instr.rs1)
-                    if rs1_fwd_data == 2:
+                    if rs1_fwd_data == "False":
                         self.stall_count += 1
                         return
                     elif rs1_fwd_data == "False":
@@ -155,7 +156,6 @@ class Core:
             # print(self.get_register_value(instr.rs1))
 
         elif opcode == "sw":
-            print(instr)
             rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
@@ -420,8 +420,6 @@ class Core:
             self.instr_decode_reg_fetch(self.IF_ID, fetch_ins)
 
     def get_register_value(self, reg: str) -> int:
-        if reg == "cid":
-            return self.core_id
         index = int(reg[1:])
         return self.registers[index]
 

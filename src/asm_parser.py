@@ -51,13 +51,23 @@ def parse_instruction_line(line: str) -> Instruction:
     instr = Instruction(opcode=opcode, original_line=line)
     if opcode in ["add", "sub","mul","div"]:
         if len(tokens) == 4:
-            instr.rd, instr.rs1, instr.rs2 = tokens[1], tokens[2], tokens[3]
+            if tokens[2] == "cid" and tokens[3] == "cid":
+                instr.rd, instr.rs1, instr.rs2 = tokens[1], "x32", "x32"
+            elif tokens[2] == "cid" or tokens[3] == "cid":
+                if tokens[2] == "cid":
+                    instr.rd, instr.rs2,instr.rs1 = tokens[1], tokens[3] , "x32"
+                else:
+                    instr.rd, instr.rs1,instr.rs2 = tokens[1], tokens[2] , "x32"
+            else:
+                instr.rd, instr.rs1, instr.rs2 = tokens[1], tokens[2], tokens[3]
         else:
             raise ValueError(f"Invalid syntax for add/sub:{line}")
     elif opcode in ["addi", "slli"]:
         if len(tokens) == 4:
-            instr.rd, instr.rs1, instr.immediate = tokens[1], tokens[2], int(
-                tokens[3])
+            if tokens[2] == "cid":
+                instr.rd, instr.rs1, instr.immediate = tokens[1], "x32", int(tokens[3])
+            else:
+                instr.rd, instr.rs1, instr.immediate = tokens[1], tokens[2], int(tokens[3])
         else:
             raise ValueError(f"Invalid Syntax for addi:{line}")
     elif opcode in ["li"]:
@@ -69,7 +79,15 @@ def parse_instruction_line(line: str) -> Instruction:
         pass
     elif opcode in ["bne", "beq", "bge"]:
         if len(tokens) == 4:
-            instr.rs1, instr.rs2, instr.label = tokens[1], tokens[2], tokens[3]
+            if tokens[1] == "cid" and tokens[2] == "cid":
+                instr.rs1, instr.rs2, instr.label = "x32", "x32", tokens[3]
+            elif tokens[1] == "cid" or tokens[2] == "cid":
+                if tokens[1] == "cid":
+                    instr.rs1, instr.rs2, instr.label = "x32", tokens[3], tokens[3]
+                else:
+                    instr.rs1, instr.rs2, instr.label = tokens[2], "x32", tokens[3]
+            else:
+                instr.rs1, instr.rs2, instr.label = tokens[1], tokens[2], tokens[3]
         else:
             raise ValueError(f"Invalid syntax for bne:{line}")
     elif opcode in ["jal"]:
@@ -93,7 +111,10 @@ def parse_instruction_line(line: str) -> Instruction:
             if opcode == "lw":
                 instr.rd = tokens[1]
             else:
-                instr.rs2 = tokens[1]
+                if tokens[1] == "cid":
+                    instr.rs2 = "x32"
+                else:
+                    instr.rs2 = tokens[1]
             try:
                 offset, rest = tokens[2].split('(')
                 instr.immediate = int(offset)
