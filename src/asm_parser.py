@@ -83,9 +83,9 @@ def parse_instruction_line(line: str) -> Instruction:
                 instr.rs1, instr.rs2, instr.label = "x32", "x32", tokens[3]
             elif tokens[1] == "cid" or tokens[2] == "cid":
                 if tokens[1] == "cid":
-                    instr.rs1, instr.rs2, instr.label = "x32", tokens[3], tokens[3]
+                    instr.rs1, instr.rs2, instr.label = "x32", tokens[2], tokens[3]
                 else:
-                    instr.rs1, instr.rs2, instr.label = tokens[2], "x32", tokens[3]
+                    instr.rs1, instr.rs2, instr.label = tokens[1], "x32", tokens[3]
             else:
                 instr.rs1, instr.rs2, instr.label = tokens[1], tokens[2], tokens[3]
         else:

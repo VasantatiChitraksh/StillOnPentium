@@ -81,7 +81,7 @@ class Simulator:
             self.instruction_fetch(instructions)
 
             fetch_possible = True
-            if self.cores[0].pc >= len(instructions):
+            if all(core.pc >= len(instructions) for core in self.cores):
                 fetch_possible = False
 
             # Check if pipeline should stop
