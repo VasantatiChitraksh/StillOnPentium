@@ -14,7 +14,7 @@ class Memory:
     def write_word(self, address: int, value: int):
         if address % 4 != 0 or address < 0 or address >= 1024:
             raise ValueError(
-                f"Invalid address requested : {address} for core id : {core_id}")
+                f"Invalid address requested : {address}")
         index = address//4
         self.word[index] = value
 

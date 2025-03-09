@@ -155,6 +155,7 @@ class Core:
             # print(self.get_register_value(instr.rs1))
 
         elif opcode == "sw":
+            print(instr)
             rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
@@ -166,9 +167,9 @@ class Core:
                         self.stall_count += 1
                         return
                     else:
-                        decoded_ready.append(rs1_fwd_data)
-                        decoded_ready.append(instr.immediate)
                         decoded_ready.append(rs2_fwd_data)
+                        decoded_ready.append(instr.immediate)
+                        decoded_ready.append(rs1_fwd_data)
                 elif self.register_active[rs1_id] > 0:
                     # print("Stalling due to rs1",instr.rs1)
                     rs1_fwd_data = self.get_forwarded_data(instr.rs1)
@@ -176,9 +177,9 @@ class Core:
                         self.stall_count += 1
                         return
                     else:
-                        decoded_ready.append(rs1_fwd_data)
-                        decoded_ready.append(instr.immediate)
                         decoded_ready.append(self.get_register_value(instr.rs2))
+                        decoded_ready.append(instr.immediate)
+                        decoded_ready.append(rs1_fwd_data)
                 elif self.register_active[rs2_id] > 0:
                     # print("Stalling due to rs2",instr.rs2)
                     rs2_fwd_data = self.get_forwarded_data(instr.rs2)
@@ -186,9 +187,9 @@ class Core:
                         self.stall_count += 1
                         return
                     else:
-                        decoded_ready.append(self.get_register_value(instr.rs1))
-                        decoded_ready.append(instr.immediate)
                         decoded_ready.append(rs2_fwd_data)
+                        decoded_ready.append(instr.immediate)
+                        decoded_ready.append(self.get_register_value(instr.rs1))
             # For sw, store the source value, then immediate, then base register value:
             else:
                 src_val = self.get_register_value(instr.rs2)
@@ -312,6 +313,7 @@ class Core:
             execute_ready.append(out)
 
         elif opcode in ["lw", "sw"]:
+            print(EX_Stage)
             offset = int(EX_Stage[2])
             # print("Offset Before Execution:", offset)
             if offset % 4 != 0:
@@ -381,6 +383,7 @@ class Core:
             memory_ready.append(memory_value)
             self.MEM_WB = memory_ready
         elif opcode == "sw":
+            print(MEM_Stage)
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
             memory.write_word(effective_addr, value)
