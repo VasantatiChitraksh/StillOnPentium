@@ -28,6 +28,34 @@ class Simulator:
                 memory.write_word(address, value)
                 address += 4
         return label_map
+    
+    def get_latency(self):
+        valid_opcodes = {"add", "sub", "mul", "slli", "addi", "j", "jal", "bne", "beq", "bge", "lw", "la", "sw"}
+
+        print(f"Available Opcodes: {', '.join(valid_opcodes)}")
+        print("Start entering in the format 'opcode' then latency. Type 'exit' to stop.")
+
+        self.latency_config = []  # Ensure it's initialized
+
+        while True:
+            opcode = input("Enter opcode: ").strip()
+            
+            if opcode == "exit":
+                break
+
+            if opcode not in valid_opcodes:
+                print(f"Invalid opcode '{opcode}'. Please enter a valid opcode from the list.")
+                continue
+
+            try:
+                value = int(input("Enter latency: ").strip())
+                if value <= 0:
+                    print("Latency must be a positive integer. Try again.")
+                    continue
+                self.latency_config.append((opcode, value))  # Store as tuple
+            except ValueError:
+                print("Invalid input! Please enter a valid integer for latency.")
+
 
     def instruction_fetch(self, instructions):
         instructions_fetch_possible = [False] * 4
@@ -76,6 +104,7 @@ class Simulator:
         def decimal_to_hex(n: int) -> str:
             return f"0x{n:x}"
 
+        self.get_latency()
         instructions, label_map, data_instructions, data_values = parse_assembly_file(assembly_file)
 
         # Initialize memory and cores
