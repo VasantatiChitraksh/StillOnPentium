@@ -38,7 +38,7 @@ class Simulator:
         self.latency_config = []  # Ensure it's initialized
 
         while True:
-            opcode = input("Enter opcode: ").strip()
+            opcode = input("Enter opcode or exit: ").strip()
             
             if opcode == "exit":
                 break
