@@ -19,7 +19,8 @@ class Simulator:
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
-        address = 1024 - data_values * 4
+        address = 4096 - data_values * 4
+        memory.set_data_section_end(address)
         for data_instr in data_instructions:
             if data_instr.label:
                 label_map[data_instr.label] = address
