@@ -13,6 +13,8 @@ class Simulator:
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
         self.cores = [core.Core(core_id=i) for i in range(4)]  # Initialize cores
         self.latency_config = {}
+        self.instruction_fetch_stall = []
+        self.structural_stall = 0
         self.data_fwd_on = input("Do you want to enable data forwarding? (y/n): ")
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
@@ -27,13 +29,26 @@ class Simulator:
         return label_map
 
     def instruction_fetch(self, instructions):
+        instructions_fetch_possible = [False] * 4
+
+        if self.cores[0].pc == self.cores[1].pc == self.cores[2].pc == self.cores[3].pc:
+            instructions_fetch_possible = [True] * 4
+            self.instruction_fetch_stall = []
+        else:
+            self.structural_stall += 1
+            if not self.instruction_fetch_stall:
+                self.instruction_fetch_stall.extend(range(4))
+
+            core_id = self.instruction_fetch_stall.pop(0)
+            instructions_fetch_possible[core_id] = True
+
         for i in range(4):
             if not self.fetch_ins[i]:
                 continue    
         
-            self.fetch_ins[i] = False
-            # if core_id == 0:
-                # print("Writing to ID:", instructions[pc])
+            if instructions_fetch_possible[i] and not self.pc_changed[i] and self.fetch_ins[i]:
+                self.fetch_ins[i] = False
+            
             if self.pc_changed[i]:
                 self.cores[i].pc = self.new_pc[i]
                 self.pc_changed[i] = False
@@ -46,7 +61,8 @@ class Simulator:
                     self.cores[i].register_active[rd_id] -= 1
                 self.cores[i].ID_EX = []
                 self.fetch_ins[i] = True
-            else:
+                continue
+            if instructions_fetch_possible[i]:
                 if self.cores[i].pc >= len(instructions):
                     continue
                 self.cores[i].IF_ID = instructions[self.cores[i].pc]
@@ -88,16 +104,8 @@ class Simulator:
             cycle += 1
             if not fetch_possible and all(not core.IF_ID and not core.ID_EX and not core.EX_MEM and not core.MEM_WB for core in self.cores):
                 pipeline_active = False
-
-        # Print simulation results
-        print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
-        print(f"Simulation done in {cycle * 4} cycles (No Parallelism).\n")
-        print(f"No of Stalls in each core:")
-        total_stall = 0
-        for core in self.cores:
-            print(f"Core ID:{core.core_id} | No Of Stalls: {core.stall_count}")
-            total_stall += core.stall_count
-        print(f"Total No of Stalls are:{total_stall}\n")
+        
+        print("Registers:\n")
         for i, core in enumerate(self.cores):
             print(f"Core {i} registers: {core.registers}")
 
@@ -107,3 +115,20 @@ class Simulator:
             addresses = [
                 f"{decimal_to_hex(i*4)}: {self.mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
             print("  |  ".join(addresses))
+
+        # Print simulation Statistics
+        print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
+        print(f"Simulation done in {cycle * 4} cycles (No Parallelism).\n")
+        print(f"Total no of structural stalls:{self.structural_stall}")
+        print("No of Stalls in each core:")
+        total_stall = 0
+        for core in self.cores:
+            print(f"Core ID:{core.core_id} | No Of Stalls: {core.stall_count}")
+            total_stall += core.stall_count
+        print(f"Total No of Stalls are:{total_stall+self.structural_stall}")
+        print(f"Total no of structural stalls:{self.structural_stall}")
+
+        print("CPI For Each Core:")
+        for core in self.cores:
+            print(f"Core ID:{core.core_id} | CPI:{cycle/core.instruction_count}")
+

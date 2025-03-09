@@ -68,7 +68,6 @@ class Core:
         decoded_ready.append(opcode)
 
         if opcode in ["add", "sub", "mul"]:
-            print(instr)
             decoded_ready.append(instr.rd)
             rd_id = int(instr.rd[1:])
             rs1_id = int(instr.rs1[1:])
@@ -313,7 +312,6 @@ class Core:
             execute_ready.append(out)
 
         elif opcode in ["lw", "sw"]:
-            print(EX_Stage)
             offset = int(EX_Stage[2])
             # print("Offset Before Execution:", offset)
             if offset % 4 != 0:
@@ -383,7 +381,6 @@ class Core:
             memory_ready.append(memory_value)
             self.MEM_WB = memory_ready
         elif opcode == "sw":
-            print(MEM_Stage)
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
             memory.write_word(effective_addr, value)
@@ -408,7 +405,8 @@ class Core:
             # print(reg_id)
             self.set_register_value(WB_Stage[1], value)
             self.register_active[reg_id] -= 1
-
+        
+        self.instruction_count += 1
         self.MEM_WB = []
 
     def execute_instruction(self, memory, fetch_ins):
