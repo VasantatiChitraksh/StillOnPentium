@@ -40,11 +40,12 @@ We ran it using Data Forwarding and without Data Forwarding.
 ![alt text](Array_sum_with_df_ipc.png)
 
 - Without DF
+![Array_sum_wo_df_ipc](https://github.com/user-attachments/assets/569b0f3e-98e9-48a8-8667-bab5741d8b7b)
 ![alt text](Array_sum_wo_df_.png)
-![alt text](Array_sum_wo_df_ipc.png)
 
 ### REGISTERS
 ![alt text](Array_sum_registers.png)
 
 ### MEMORY
 ![alt text](Array_sum_memory.png)
+
