@@ -55,9 +55,9 @@ finish2:
     addi x21 x21 4
     sw x11 0(x21)
 
-    add a0 x0 x11              #a0
-    add a7 x0 1                #a7
+    add a0 x0 x11
+    li a7 1 
     ecall
-
+    
 finish:
     nop

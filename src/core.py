@@ -23,6 +23,7 @@ class Core:
         self.mem_done = True
         self.isDF = False
         self.latency_map = {}
+        self.isWB = False
 
     def get_data_from_EX_MEM(self, rd) -> any:
         if not self.EX_MEM:
@@ -60,6 +61,7 @@ class Core:
     def instr_decode_reg_fetch(self, instr: Instruction, fetch_ins):
         if not self.IF_ID:
             return
+        
         if self.execute_prev_done == False:
             self.stall_count+=1
             return
@@ -253,6 +255,15 @@ class Core:
 
         elif opcode == "j":
             decoded_ready.append(instr.label)
+        
+        elif opcode == "li":
+            rd_id = int(instr.rd[1:])
+            decoded_ready.append(instr.rd)
+            decoded_ready.append(instr.immediate)
+            self.register_active[rd_id] += 1 
+        
+        elif opcode == "ecall":
+            pass
 
         self.ID_EX = decoded_ready
         if self.ID_EX[0] in ["lw", "sw", "la"]:
@@ -352,6 +363,18 @@ class Core:
             new_pc = self.labels_map[label]
             simulator.Simulator.new_pc[self.core_id] = new_pc
             simulator.Simulator.pc_changed[self.core_id] = True
+        
+        elif opcode == "li":
+            execute_ready = EX_Stage 
+        
+        elif opcode == "ecall":
+            if self.isWB or self.MEM_WB or self.EX_MEM:
+                self.stall_count += 1
+                return
+            if self.registers[17] == 1:
+                print(f"{self.registers[10]}")
+            else:
+                pass
 
         self.ID_EX = []
         self.execute_prev_done = True
@@ -400,7 +423,7 @@ class Core:
         opcode = WB_Stage[0]
         # print("WB:", WB_Stage)
 
-        if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal"]:
+        if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal","li"]:
             value = int(WB_Stage[2])
             reg_id = int(WB_Stage[1][1:])
             # print(reg_id)
@@ -408,6 +431,7 @@ class Core:
             self.register_active[reg_id] -= 1
         
         self.instruction_count += 1
+        self.isWB = True
         self.MEM_WB = []
 
     def execute_instruction(self, memory, fetch_ins):

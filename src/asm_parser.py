@@ -51,6 +51,11 @@ def parse_instruction_line(line: str) -> Instruction:
     instr = Instruction(opcode=opcode, original_line=line)
     if opcode in ["add", "sub","mul","div"]:
         if len(tokens) == 4:
+            if tokens[1] == "a0" or tokens[1] == "a7":
+                if tokens[1] == "a0":
+                    tokens[1] = "x10"
+                else:
+                    tokens[1] = "x17"
             if tokens[2] == "cid" and tokens[3] == "cid":
                 instr.rd, instr.rs1, instr.rs2 = tokens[1], "x32", "x32"
             elif tokens[2] == "cid" or tokens[3] == "cid":
@@ -64,6 +69,11 @@ def parse_instruction_line(line: str) -> Instruction:
             raise ValueError(f"Invalid syntax for add/sub:{line}")
     elif opcode in ["addi", "slli"]:
         if len(tokens) == 4:
+            if tokens[1] == "a0" or tokens[1] == "a7":
+                if tokens[1] == "a0":
+                    tokens[1] = "x10"
+                else:
+                    tokens[1] = "x17"
             if tokens[2] == "cid":
                 instr.rd, instr.rs1, instr.immediate = tokens[1], "x32", int(tokens[3])
             else:
@@ -71,6 +81,11 @@ def parse_instruction_line(line: str) -> Instruction:
         else:
             raise ValueError(f"Invalid Syntax for addi:{line}")
     elif opcode in ["li"]:
+        if tokens[1] == "a0" or tokens[1] == "a7":
+                if tokens[1] == "a0":
+                    tokens[1] = "x10"
+                else:
+                    tokens[1] = "x17"
         if len(tokens) == 3:
             instr.rd, instr.immediate = tokens[1], int(tokens[2])
         else:
@@ -92,17 +107,32 @@ def parse_instruction_line(line: str) -> Instruction:
             raise ValueError(f"Invalid syntax for bne:{line}")
     elif opcode in ["jal"]:
         if len(tokens) == 3:
+            if tokens[1] == "a0" or tokens[1] == "a7":
+                if tokens[1] == "a0":
+                    tokens[1] = "x10"
+                else:
+                    tokens[1] = "x17"
             instr.rd, instr.label = tokens[1], tokens[2]
         else:
             raise ValueError(f"Invalid syntax for jal:{line}")
     elif opcode in ["jalr"]:
         if len(tokens) == 4:
+            if tokens[1] == "a0" or tokens[1] == "a7":
+                if tokens[1] == "a0":
+                    tokens[1] = "x10"
+                else:
+                    tokens[1] = "x17"
             instr.rd, instr.rs1, instr.immediate = tokens[1], tokens[2], int(
                 tokens[3])
         else:
             raise ValueError(f"Invalid syntax for jalr:{line}")
     elif opcode in ["la"]:
         if len(tokens) == 3:
+            if tokens[1] == "a0" or tokens[1] == "a7":
+                if tokens[1] == "a0":
+                    tokens[1] = "x10"
+                else:
+                    tokens[1] = "x17"
             instr.rd, instr.label = tokens[1], tokens[2]
         else:
             raise ValueError(f"Invalid syntax for la:{line}")
@@ -125,6 +155,8 @@ def parse_instruction_line(line: str) -> Instruction:
             raise ValueError(f"Invalid syntax for lw/sw:{line}")
     elif opcode in ["j"]:
         instr.label = tokens[1]
+    elif opcode in ["ecall"]:
+        pass
     else:
         raise ValueError(f"OpCode not implemented yet:{line}")
     return instr

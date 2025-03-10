@@ -12,9 +12,24 @@ class Simulator:
     def __init__(self):
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
         self.cores = [core.Core(core_id=i) for i in range(4)]  # Initialize cores
-        self.latency_config = {}
+        self.latency_config = {
+            'add':1,
+            'mul':1,
+            'sub':1,
+            'lw':1,
+            'sw':1,
+            'bne':1,
+            'beq':1,
+            'bge':1,
+            'la':1,
+            'li':1,
+            'addi':1,
+            'slli':1,
+            'j':1,
+            'jal':1,
+            'jalr':1
+        }
         self.instruction_fetch_stall = []
-        self.structural_stall = 0
         self.data_fwd_on = input("Do you want to enable data forwarding? (y/n): ")
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
@@ -30,31 +45,29 @@ class Simulator:
         return label_map
     
     def get_latency(self):
-        valid_opcodes = {"add", "sub", "mul", "slli", "addi", "j", "jal", "bne", "beq", "bge", "lw", "la", "sw"}
-
-        print(f"Available Opcodes: {', '.join(valid_opcodes)}")
-        print("Start entering in the format 'opcode' then latency. Type 'exit' to stop.")
-
-        self.latency_config = []  # Ensure it's initialized
+        print("Enter opcode and latency in the format: opcode latency")
+        print("Type 'exit' when finished.")
+        print("Available opcodes:", ", ".join(self.latency_config.keys()))
 
         while True:
-            opcode = input("Enter opcode or exit: ").strip()
-            
-            if opcode == "exit":
-                break
-
-            if opcode not in valid_opcodes:
-                print(f"Invalid opcode '{opcode}'. Please enter a valid opcode from the list.")
-                continue
-
+            user_input = input("Enter opcode and latency: ").strip()
+            if user_input.lower() == "exit":
+                break  
             try:
-                value = int(input("Enter latency: ").strip())
-                if value <= 0:
-                    print("Latency must be a positive integer. Try again.")
-                    continue
-                self.latency_config.append((opcode, value))  # Store as tuple
+                opcode, latency = user_input.split()
+                latency = int(latency)
+                if opcode in self.latency_config:
+                    if latency > 0:
+                        self.latency_config[opcode] = latency  # Update if valid
+                    else:
+                        print("Latency must be positive.")
+                else:
+                    print(f"Invalid opcode '{opcode}'. Please enter a valid opcode.")
+
             except ValueError:
-                print("Invalid input! Please enter a valid integer for latency.")
+                print("Invalid format. Please enter in 'opcode latency' format.")
+            except IndexError:
+                print("Please enter both opcode and latency.")
 
 
     def instruction_fetch(self, instructions):
@@ -64,7 +77,6 @@ class Simulator:
             instructions_fetch_possible = [True] * 4
             self.instruction_fetch_stall = []
         else:
-            self.structural_stall += 1
             # if not self.instruction_fetch_stall:
             #     self.instruction_fetch_stall.extend(range(4))
 
@@ -80,6 +92,7 @@ class Simulator:
             instructions_fetch_possible[core_id] = True
 
         for i in range(4):
+            self.cores[i].isWB = False
             if not self.fetch_ins[i]:
                 continue    
         
@@ -113,6 +126,7 @@ class Simulator:
             return f"0x{n:x}"
 
         self.get_latency()
+        print("\nCONSOLE\n")
         instructions, label_map, data_instructions, data_values = parse_assembly_file(assembly_file)
 
         # Initialize memory and cores
@@ -144,7 +158,8 @@ class Simulator:
             if not fetch_possible and all(not core.IF_ID and not core.ID_EX and not core.EX_MEM and not core.MEM_WB for core in self.cores):
                 pipeline_active = False
         
-        print("Registers:\n")
+        print("---------------------------------------------------------------------------------------------------------")
+        print("\nRegisters:")
         for i, core in enumerate(self.cores):
             print(f"Core {i} registers: {core.registers}")
 
@@ -156,17 +171,15 @@ class Simulator:
             print("  |  ".join(addresses))
 
         # Print simulation Statistics
-        print(f"Simulation completed in {cycle} cycles (Assuming Parallelism).")
-        print(f"Simulation done in {cycle * 4} cycles (No Parallelism).\n")
-        print("No of Stalls in each core:")
+        print(f"\nSimulation completed in {cycle} cycles (Parallelism).")
+        print("\nNo of Stalls in each core:")
         total_stall = 0
         for core in self.cores:
             print(f"Core ID:{core.core_id} | No Of Stalls: {core.stall_count}")
             total_stall += core.stall_count
-        print(f"Total No of Stalls are:{total_stall+self.structural_stall}")
-        print(f"Total no of structural stalls:{self.structural_stall}")
+        print(f"Total No of Stalls are:{total_stall}")
 
-        print("CPI For Each Core:")
+        print("\nIPC For Each Core:")
         for core in self.cores:
             print(f"Core ID:{core.core_id} | IPC:{core.instruction_count/cycle}")
 
