@@ -58,9 +58,10 @@ class Core:
             return data_from_EX_MEM
     
     def instr_decode_reg_fetch(self, instr: Instruction, fetch_ins):
-        if self.execute_prev_done == False:
-            return
         if not self.IF_ID:
+            return
+        if self.execute_prev_done == False:
+            self.stall_count+=1
             return
         # print("Decoding:", instr)
         opcode = instr.opcode

@@ -14,6 +14,8 @@ def visualize_cores(cores):
     plt.title("Core Registers - Final State")
     plt.xlabel("Register Index")
     plt.ylabel("Core ID")
+    plt.yticks(range(0, 4, 1))  # Set x-axis ticks at multiples of 4
+    plt.xticks(range(0, 33, 1))  # Set y-axis ticks at multiples of 4
     
     # Annotate values
     for i in range(num_cores):
@@ -26,23 +28,23 @@ def visualize_cores(cores):
 
 def visualize_memory(memory):
     """Visualize memory as a 64x64 grid with labeled values."""
-    memory_slice = memory[:4096]  # Ensure 4096 values
-    if len(memory_slice) < 4096:
-        memory_slice += [0] * (4096 - len(memory_slice))
+    memory_slice = memory[:1024]  # Ensure 4096 values
+    if len(memory_slice) < 1024:
+        memory_slice += [0] * (1024 - len(memory_slice))
     
-    memory_grid = np.array(memory_slice).reshape(64, 64)
+    memory_grid = np.array(memory_slice).reshape(32, 32)
     
     plt.figure(figsize=(12, 12))
     plt.imshow(memory_grid, cmap="coolwarm", aspect="auto")
-    plt.title("Memory Values (64x64 Grid)")
+    plt.title("Memory Values (32x32 Grid)")
     plt.xlabel("Column Index")
     plt.ylabel("Row Index")
-    plt.xticks(range(0, 64, 4))  # Set x-axis ticks at multiples of 4
-    plt.yticks(range(0, 64, 4))  # Set y-axis ticks at multiples of 4
+    plt.xticks(range(0, 32, 1))
+    plt.yticks(range(0, 32, 1))
     
     # Annotate values
-    for i in range(64):
-        for j in range(64):
+    for i in range(32):
+        for j in range(32):
             plt.text(j, i, f"{memory_grid[i, j]}", ha="center", va="center", color="black", fontsize=6)
     
     plt.tight_layout()

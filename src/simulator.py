@@ -65,8 +65,16 @@ class Simulator:
             self.instruction_fetch_stall = []
         else:
             self.structural_stall += 1
+            # if not self.instruction_fetch_stall:
+            #     self.instruction_fetch_stall.extend(range(4))
+
+            # core_id = self.instruction_fetch_stall.pop(0)
+            # instructions_fetch_possible[core_id] = True
             if not self.instruction_fetch_stall:
-                self.instruction_fetch_stall.extend(range(4))
+                for i in range(4):
+                    if self.cores[i].pc >= len(instructions):
+                        continue
+                    self.instruction_fetch_stall.append(i)
 
             core_id = self.instruction_fetch_stall.pop(0)
             instructions_fetch_possible[core_id] = True
@@ -160,5 +168,5 @@ class Simulator:
 
         print("CPI For Each Core:")
         for core in self.cores:
-            print(f"Core ID:{core.core_id} | CPI:{cycle/core.instruction_count}")
+            print(f"Core ID:{core.core_id} | IPC:{core.instruction_count/cycle}")
 

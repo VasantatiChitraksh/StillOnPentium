@@ -3,7 +3,7 @@ arr: .word 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
      .word 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25  
      .word 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25  
      .word 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25  
-partial_sum:.word 0 0 0 0
+partial_sum:.word 0 0 0 0 0
 
 .text
 add x2 x0 cid                     # Load cid (Ensure cid is set, modify this based on your needs)
@@ -52,5 +52,12 @@ loop2:
     j loop2
 finish2:
     add x31 x0 x11
+    addi x21 x21 4
+    sw x11 0(x21)
+
+    add a0 x0 x11              #a0
+    add a7 x0 1                #a7
+    ecall
+
 finish:
     nop
