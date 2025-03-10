@@ -4,16 +4,14 @@ This project is a multi-core simulator written in Python. The simulator emulates
 
 ## Project Structure
 - **src/**
-  - **simulator.py**:Multi Core Execution
-  - **execution_engine.py**:Single Core Execution
+  - **main.py**: Main Simulator file
+  - **simulator.py**: Multi Core Execution
   - **core.py**: Core Module
   - **asm_parser.py**: Assembly Code Parser
   - **memory.py**: To Handle Memory
-  - **instruction.py**:Instruction Dataclass
+  - **instructions.py**:Instruction Dataclass
   - **data_instructions.py**: .data Section
 - **tests/**: Unit tests and sample assembly programs.
-  - **bubble_sort.asm**
-  - **test_core_memory.py**
 - **docs/**
   - **design.md**
   - **meeting_minutes.md**
@@ -26,6 +24,14 @@ Please refer to [docs/meeting_minutes.md](docs/meeting_minutes.md) for the meeti
 2. Navigate to the project directory.
 3. Run the simulator using `python src/simulator.py [assembly_filename].asm`.(Make sure the assembly file to be run is in the root directory or in the tests folder)
 4. For e.g., `python src/simulator.py tests/bubble_sort.asm` or `python src/simulator.py tests/sample.asm`
+
+
+## Features (Phase 2)
+- The cores now follow the five stages of the RISC-V pipeline with a single instruction fetch unit for all the cores
+- Hazards are detected and stalls are made when needed
+- Option to enable/disable Data Forwarding in pipeline
+- Variable latencies for instructions
+- CID(core id) register for all cores and can be used in assembly code
 
 ## Features (Phase 1)
 - Supports instructions:
