@@ -4,6 +4,7 @@
 
 ### 10th Mar 2025
 ### Members : K Sandeep, V Chitraksh
+- Added ecall functionality
 - Final Bug Checking
 ---
 
