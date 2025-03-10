@@ -1,5 +1,6 @@
-# Meeting Minutes
+# Meeting Minutes - Meetings held and Design changes made
 
+# Phase 2
 
 ### 10th Mar 2025
 ### Members : K Sandeep, V Chitraksh
@@ -43,7 +44,7 @@
 - Discussed the requirements of phase 2 and the required changes that have to be implemented
 - Drafted a rough day to day plan of tasks to do
 ---
-## Phase 2 Start
+# Phase 1
 
 ### 19th Feb 2025
 ### Members : K Sandeep, V Chitraksh
@@ -94,4 +95,3 @@
 - Made a decision to support add,sub,addi,lw,sw,bne,jal
 - Made a plan with daily tasks describing what to do on a particular day
 ---
-## Phase 1 Start
