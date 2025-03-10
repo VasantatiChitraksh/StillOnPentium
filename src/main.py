@@ -14,8 +14,8 @@ def visualize_cores(cores):
     plt.title("Core Registers - Final State")
     plt.xlabel("Register Index")
     plt.ylabel("Core ID")
-    plt.yticks(range(0, 4, 1))  # Set x-axis ticks at multiples of 4
-    plt.xticks(range(0, 33, 1))  # Set y-axis ticks at multiples of 4
+    plt.yticks(range(0, 4, 1))  
+    plt.xticks(range(0, 33, 1))  
     
     # Annotate values
     for i in range(num_cores):

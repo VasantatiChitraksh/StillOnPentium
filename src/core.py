@@ -33,7 +33,7 @@ class Core:
         if rd == self.EX_MEM[1] and self.EX_MEM[0] not in ["lw", "la"]:
             return self.EX_MEM[2]
         elif rd == self.EX_MEM[1] and self.EX_MEM[0] in ["lw", "la"]:
-            return "False"
+            return "STALL"
         return "False"
 
     def get_data_from_MEM_WB(self, rd) -> any:
@@ -47,7 +47,7 @@ class Core:
         if not self.isDF:
             return "False"
         data_from_EX_MEM = self.get_data_from_EX_MEM(rd)
-        if data_from_EX_MEM == "False":
+        if data_from_EX_MEM == "STALL":
             return "False"
         elif data_from_EX_MEM == "False":
             data_from_MEM_WB = self.get_data_from_MEM_WB(rd)
