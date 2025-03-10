@@ -1,22 +1,7 @@
 # Phase II Output
 
 ## TESTING WITH PROVIDED CODE
-A code involving 'cid' is given to us in which only core 1 not taking the branch while all other cores take the branch. Now, we will run 3 tests on it.
-
-- Without Data Forwarding
-![alt text](Test_Code_wo_DF.png)
-![alt text](Test_code_wo_DF_IPC.png)
-The No of cycles is 13.
-
-- With Data Forwarding
-![alt text](Test_code_with_df.png) 
-![alt text](Test_code_with_df_IPC.png)
-The No of cycles is 12
-
-- With Data Forwarding and Added Latency to 'bne'
-![alt text](Test_code_with_df_with_latency.png)
-![alt text](Test_code_with_df_latency_ipc.png)
-The No of cycles is 14(+2 added due to latency)
+A code involving 'cid' is given to us in which only core 1 not taking the branch while all other cores take the branch. Now, we will run 3 tests on it. Clearly the core 1's IPC is different and also its registers are different.
 ```asm=
 addi x10 x0 1
 add x2 x3 x4
@@ -25,6 +10,24 @@ addi x5 x6 3
 label: 
 addi x8 x9 3
 ```
+
+- Without Data Forwarding
+![alt text](Test_Code_wo_DF.png)
+![alt text](Test_code_wo_DF_IPC.png)
+
+**The No of cycles is 13**
+
+- With Data Forwarding
+![alt text](Test_code_with_df.png) 
+![alt text](Test_code_with_df_IPC.png)
+
+**The No of cycles is 12**
+
+- With Data Forwarding and Added Latency to 'bne'
+![alt text](Test_code_with_df_with_latency.png)
+![alt text](Test_code_with_df_latency_ipc.png)
+
+**The No of cycles is 14(+2 added due to latency)**
 
 ## Array Sum Problem
 
