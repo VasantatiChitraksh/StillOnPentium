@@ -6,18 +6,19 @@ class Memory:
         self.data_section_end = 0
 
     def read_word(self, address: int) -> int:
-        if address % 4 != 0 or address < 0 or address >= 1024:
+        if address % 4 != 0 or address < 0 or address >= self.size//4:
             # Check for valid address
-            if address<=4092 and address>=self.data_section_end:
+            if address <= 4092 and address >= self.data_section_end:
                 index = address//4
                 return self.word[index]
-            raise ValueError(f"Invalid address requested : {address*4} max is 4095 4Kb")
+            raise ValueError(
+                f"Invalid address requested : {address*4} max is 4095 4Kb")
         index = address//4
         return self.word[index]
 
     def write_word(self, address: int, value: int):
-        if address % 4 != 0 or address < 0 or address >= 1024:
-            if address<=4092 and address>=self.data_section_end:
+        if address % 4 != 0 or address < 0 or address >= self.size//4:
+            if address <= 4092 and address >= self.data_section_end:
                 index = address//4
                 self.word[index] = value
                 return
@@ -26,5 +27,5 @@ class Memory:
         index = address//4
         self.word[index] = value
 
-    def set_data_section_end(self,address:int):
+    def set_data_section_end(self, address: int):
         self.data_section_end = address
