@@ -415,7 +415,7 @@ class Core:
         elif opcode == "sw":
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
-            memory.write_word(effective_addr, value)
+            Simulator.write_data(effective_addr, value)
             self.MEM_WB = memory_ready
         else:
             self.MEM_WB = MEM_Stage

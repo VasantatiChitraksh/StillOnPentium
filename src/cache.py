@@ -13,10 +13,10 @@ class CacheSet:
         self.lru = deque(self.lines)  # LRU ordering
 
 class Cache:
-    def __init__(self):
-        self.cache_size = 64  # in bytes
-        self.block_size = 8   # bytes
-        self.associativity = 4
+    def __init__(self,cache_size=64, block_size=8, associativity=4):
+        self.cache_size = cache_size  # in bytes
+        self.block_size = block_size   # bytes
+        self.associativity = associativity
         self.num_blocks = self.cache_size // self.block_size
         self.num_sets = self.num_blocks // self.associativity
         self.sets = [CacheSet(self.associativity, self.block_size) for _ in range(self.num_sets)]
@@ -53,3 +53,20 @@ class Cache:
         victim.tag = tag
         victim.block = block_data.copy()
         cache_set.lru.append(victim)
+
+    def update_word(self, address, value):
+        tag, index, offset = self._parse_address(address)
+        cache_set = self.sets[index]
+
+        for line in cache_set.lines:
+            if line.tag == tag:
+                word_index = offset // 4  
+                line.block[word_index] = value
+
+                if line in cache_set.lru:
+                    cache_set.lru.remove(line)
+                cache_set.lru.append(line)
+                return  
+            
+        raise ValueError(f"Trying to update a word not found in cache! Address: {address}")
+
