@@ -5,7 +5,7 @@ class CacheLine:
     def __init__(self, block_size):
         self.block_size = block_size
         self.tag = None
-        self.block = [0] * (block_size // 4)  # 4 bytes per word
+        self.block = [] * (block_size // 4)  # 4 bytes per word
 
 class CacheSet:
     def __init__(self, associativity, block_size):
@@ -14,6 +14,8 @@ class CacheSet:
 
 class Cache:
     def __init__(self,cache_size=64, block_size=8, associativity=4):
+        self.misses = 0
+        self.hits = 0
         self.cache_size = cache_size  # in bytes
         self.block_size = block_size   # bytes
         self.associativity = associativity
