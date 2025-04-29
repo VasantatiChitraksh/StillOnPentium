@@ -262,6 +262,7 @@ class Simulator:
                 # Store to cache2
                 self.cache2.replaceCacheLine(word_block_address, new_block)
 
+    # Excluisve
     def Cache2TOCache1(self, effective_address: int):
     # Calculate the start address of the block for cache1
         block_address = effective_address // self.cache1.block_size * self.cache1.block_size
@@ -318,6 +319,49 @@ class Simulator:
                         cache_set.lru.appendleft(line)  # Move to LRU position
                     break                                                                                        
     
+    # Inclusive
+    # def Cache2TOCache1(self, effective_address: int):
+    # # Calculate the start address of the block for cache1
+    #     block_address = effective_address // self.cache1.block_size * self.cache1.block_size
+
+    #     # Prepare the block data for cache1
+    #     block_data = []
+
+    #     for i in range(self.cache1.block_size // 4):
+    #         word_address = block_address + i * 4
+    #         found, value = self.cache2.findCache(word_address)
+    #         if found:
+    #             block_data.append(value)
+    #         else:
+    #             # If any part is missing from cache2, read from memory and write to cache2
+    #             value = self.mem.read_word(word_address)
+    #             block_data.append(value)
+
+    #             # Write the fetched word to cache2 to maintain inclusion
+    #             self.cache2.update_word(word_address, value)  # You must have a `.write()` method
+
+    #     # Get tag and index for the target set in cache1
+    #     tag, index, _ = self.cache1._parse_address(block_address)
+    #     cache_set = self.cache1.sets[index]
+
+    #     # Find the LRU line to replace
+    #     victim = cache_set.lru[0]
+    #     cache_set.lru.remove(victim)
+
+    #     # No need to move evicted line back to cache2 — it’s already there
+
+    #     # Update the victim line with the new data
+    #     victim.tag = tag
+    #     victim.block = block_data.copy()
+
+    #     # Move the updated line to MRU
+    #     cache_set.lru.append(victim)
+
+    #     # INCLUSIVE: Ensure cache2 still contains this block (if not already)
+    #     for i in range(self.cache1.block_size // 4):
+    #         word_address = block_address + i * 4
+    #         self.cache2.update_word(word_address, block_data[i])  # Maintain inclusion
+
     def print_cache(self):
         print("Cache 1:")
         for i, cache_set in enumerate(self.cache1.sets):
@@ -360,7 +404,7 @@ class Simulator:
                 core = self.cores[i]
                 core.execute_instruction(self.mem, self.fetch_ins, self)
             self.instruction_fetch(instructions)
-            # self.print_cache()
+            self.print_cache()
 
             fetch_possible = True
             if all(core.pc >= len(instructions) for core in self.cores):
