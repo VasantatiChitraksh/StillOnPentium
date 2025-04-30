@@ -39,6 +39,66 @@ class Simulator:
         self.data_fwd_on = input(
             "Do you want to enable data forwarding? (y/n): ")
 
+    def load_instruction_to_L1(self, pc, instructions):
+        block_address = (pc // (self.cache_instruction.block_size // 4)
+                         ) * self.cache_instruction.block_size
+        block_data = []
+        for offset in range(0, self.cache_instruction.block_size, 4):
+            addr = block_address + offset
+            index = addr // 4
+            if index < len(instructions):
+                block_data.append(instructions[index])
+            else:
+                block_data.append(0)  # default NOP or 0
+
+        # Check if we need to evict a block from the instruction cache
+        tag, index, _ = self.cache_instruction._parse_address(block_address)
+        cache_set = self.cache_instruction.sets[index]
+
+        # Find if we have an empty line
+        empty_line = None
+        for line in cache_set.lines:
+            if line.tag is None:
+                empty_line = line
+                break
+
+        if empty_line is not None:
+            # print("Found empty line in instruction cache")
+            # We have an empty line, just use it
+            empty_line.tag = tag
+            empty_line.block = block_data.copy()
+            # Update LRU - move to end as most recently used
+            cache_set.lru.remove(empty_line)
+            cache_set.lru.append(empty_line)
+        else:
+            # print("No empty line found, need to evict a block")
+            # Check if we have a line with the same tag (hit)
+            # Need to evict - get the victim
+            victim = cache_set.lru[0]  # The least recently used line
+            if victim.tag is not None:
+                # Calculate the original address of the victim line
+                victim_block_address = victim.tag * \
+                    (self.cache_instruction.block_size * self.cache_instruction.num_sets) + \
+                    index * self.cache_instruction.block_size
+                # Save the victim's data before replacing
+                victim_data = victim.block.copy()
+                # Replace the cache line
+                victim.tag = tag
+                victim.block = block_data.copy()
+                # Update LRU
+                cache_set.lru.remove(victim)
+                cache_set.lru.append(victim)
+                # Move evicted instruction data to cache2
+                # print(f"Evicting instruction block from addr {victim_block_address} to L2 cache")
+                self.Cache1TOCache2(
+                    victim_block_address, victim_data)
+                # print(f"Evicted instruction block from addr {victim_block_address} to L2 cache")
+            else:
+                # Replace the cache line (shouldn't happen if we've checked properly)
+                # print("Hey")
+                self.cache_instruction.replaceCacheLine(
+                    block_address, block_data)
+                
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
         address = 0

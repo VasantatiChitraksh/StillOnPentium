@@ -24,6 +24,9 @@ class Cache:
         self.offset_bits = int(math.log2(self.block_size))
         self.index_bits = int(math.log2(self.num_sets))
 
+        self.misses = 0
+        self.hits = 0
+
     def _parse_address(self, address):
         offset = address % self.block_size
         index = (address // self.block_size) % self.num_sets
