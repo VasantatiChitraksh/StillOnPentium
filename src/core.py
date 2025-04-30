@@ -408,14 +408,14 @@ class Core:
         if opcode == "lw":
             effective_addr = int(MEM_Stage[2])
             print("Hey, effective_addr:", effective_addr)
-            memory_value = Simulator.fetch_memory_value(effective_addr)
+            memory_value = Simulator.cache_controller(effective_addr,None,0)
             memory_ready.append(MEM_Stage[1])
             memory_ready.append(memory_value)
             self.MEM_WB = memory_ready
         elif opcode == "sw":
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
-            Simulator.write_data(effective_addr, value)
+            Simulator.cache_controller(effective_addr, value,1)
             self.MEM_WB = memory_ready
         else:
             self.MEM_WB = MEM_Stage

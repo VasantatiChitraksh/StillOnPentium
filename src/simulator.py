@@ -12,9 +12,12 @@ class Simulator:
     fetch_ins = [True] * 4
 
     def __init__(self):
-        self.cache1 = Cache()
-        self.cache_instruction = Cache()
-        self.cache2 = Cache()
+        self.cache_block_size = 8  # bytes
+        cache_size = 64
+        associativity = 4
+        self.cache1 = Cache(cache_size, self.cache_block_size, associativity)
+        self.cache_instruction = Cache(cache_size, self.cache_block_size, associativity)
+        self.cache2 = Cache(cache_size, self.cache_block_size, associativity)
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
         self.cores = [core.Core(core_id=i)
                       for i in range(4)]  # Initialize cores
@@ -38,66 +41,6 @@ class Simulator:
         self.instruction_fetch_stall = []
         self.data_fwd_on = input(
             "Do you want to enable data forwarding? (y/n): ")
-
-    def load_instruction_to_L1(self, pc, instructions):
-        block_address = (pc // (self.cache_instruction.block_size // 4)
-                         ) * self.cache_instruction.block_size
-        block_data = []
-        for offset in range(0, self.cache_instruction.block_size, 4):
-            addr = block_address + offset
-            index = addr // 4
-            if index < len(instructions):
-                block_data.append(instructions[index])
-            else:
-                block_data.append(0)  # default NOP or 0
-
-        # Check if we need to evict a block from the instruction cache
-        tag, index, _ = self.cache_instruction._parse_address(block_address)
-        cache_set = self.cache_instruction.sets[index]
-
-        # Find if we have an empty line
-        empty_line = None
-        for line in cache_set.lines:
-            if line.tag is None:
-                empty_line = line
-                break
-
-        if empty_line is not None:
-            # print("Found empty line in instruction cache")
-            # We have an empty line, just use it
-            empty_line.tag = tag
-            empty_line.block = block_data.copy()
-            # Update LRU - move to end as most recently used
-            cache_set.lru.remove(empty_line)
-            cache_set.lru.append(empty_line)
-        else:
-            # print("No empty line found, need to evict a block")
-            # Check if we have a line with the same tag (hit)
-            # Need to evict - get the victim
-            victim = cache_set.lru[0]  # The least recently used line
-            if victim.tag is not None:
-                # Calculate the original address of the victim line
-                victim_block_address = victim.tag * \
-                    (self.cache_instruction.block_size * self.cache_instruction.num_sets) + \
-                    index * self.cache_instruction.block_size
-                # Save the victim's data before replacing
-                victim_data = victim.block.copy()
-                # Replace the cache line
-                victim.tag = tag
-                victim.block = block_data.copy()
-                # Update LRU
-                cache_set.lru.remove(victim)
-                cache_set.lru.append(victim)
-                # Move evicted instruction data to cache2
-                # print(f"Evicting instruction block from addr {victim_block_address} to L2 cache")
-                self.Cache1TOCache2(
-                    victim_block_address, victim_data)
-                # print(f"Evicted instruction block from addr {victim_block_address} to L2 cache")
-            else:
-                # Replace the cache line (shouldn't happen if we've checked properly)
-                # print("Hey")
-                self.cache_instruction.replaceCacheLine(
-                    block_address, block_data)
                 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
@@ -188,252 +131,64 @@ class Simulator:
                 self.cores[i].pc += 1
             if self.cores[i].pc >= len(instructions):
                 continue
-
-    def write_data(self, effective_address: int, value: int):
-        if effective_address % 4 != 0 or effective_address < 0 or effective_address >= self.mem.size:
-            raise ValueError(
-                f"Invalid address to write: {effective_address*4} max is 4095 (4KB memory)"
-            )
-        
-        found1, _ = self.cache1.findCache(effective_address)
-        if found1:
-            print("Write hit in cache1")
-            self.cache1.update_word(effective_address, value)
-            self.mem.write_word(effective_address, value)  # Write through to memory
-            return
-
-        found2, _ = self.cache2.findCache(effective_address)
-        if found2:
-            print("Write hit in cache2 (moving block to cache1 first)")
-            self.Cache2TOCache1(effective_address)
-            self.cache1.update_word(effective_address, value)
-            self.mem.write_word(effective_address, value)  # Write through to memory
-            return
-
-        print("Write miss in both caches, loading block from memory first")
-        self.MM2Cache1(effective_address)
-        self.cache1.update_word(effective_address, value)
-        self.mem.write_word(effective_address, value)  # Write through to memory
-
-    def fetch_memory_value(self, effective_address: int) -> int:
-        if effective_address % 4 != 0 or effective_address < 0 or effective_address >= self.mem.size:
-            raise ValueError(
-                f"Invalid address requested : {effective_address*4} max is 4095 4Kb")
-        
-        found1, value = self.cache1.findCache(effective_address)
-        if found1:
-            print("Cache hit in cache1")
-            return value
-        
-        found2, value = self.cache2.findCache(effective_address)
-        if found2:
-            print("Cache hit in cache2")
-            # Move data from cache2 to cache1
-            self.Cache2TOCache1(effective_address)
-            # Get the value again from cache1
-            _, value = self.cache1.findCache(effective_address)
-            return value
-        
-        print("Cache miss in both caches effective address is", effective_address)
-        # Load from main memory to cache1
-        self.MM2Cache1(effective_address)
-        value = self.mem.read_word(effective_address)
-        return value
-
-    def MM2Cache1(self, effective_address: int):
-        # Calculate the start address of the block
-        block_address = effective_address // self.cache1.block_size * self.cache1.block_size
-        print("MM2Cache1 effective address is", effective_address)
-        
-        # Get the block data from memory
-        block_data = [self.mem.read_word(block_address + i * 4) for i in range(self.cache1.block_size // 4)]
-        
-        # Get the tag and index for the new block
-        tag, index, _ = self.cache1._parse_address(block_address)
-        cache_set = self.cache1.sets[index]
-        
-        # Check if there's a line with None tag (empty line)
-        empty_line = None
-        for line in cache_set.lines:
-            if line.tag is None:
-                empty_line = line
-                break
-        
-        # If there's an empty line, use it
-        if empty_line is not None:
-            empty_line.tag = tag
-            empty_line.block = block_data.copy()
-            # Update LRU - move to end as most recently used
-            cache_set.lru.remove(empty_line)
-            cache_set.lru.append(empty_line)
-        else:
-            # Need to evict - get the victim
-            victim = cache_set.lru[0]  # The least recently used line
-            if victim.tag is not None:
-                # Calculate the original address of the victim line
-                victim_block_address = victim.tag * (self.cache1.block_size * self.cache1.num_sets) + index * self.cache1.block_size
-                # Save the victim's data before replacing
-                victim_data = victim.block.copy()
-                # Replace the cache line
-                victim.tag = tag
-                victim.block = block_data.copy()
-                # Update LRU
-                cache_set.lru.remove(victim)
-                cache_set.lru.append(victim)
-                # Move evicted data to cache2
-                self.Cache1TOCache2(victim_block_address, victim_data)
-            else:
-                # Replace the cache line (shouldn't happen if we've checked properly)
-                self.cache1.replaceCacheLine(block_address, block_data)
-
-    def Cache1TOCache2(self, block_address: int, block_data):
-        # Move each word from the evicted block to cache2
-        for i in range(len(block_data)):
-            word_address = block_address + i * 4
-            # Create a single-element list for each word to match cache2's block structure
-            # Assuming cache2 uses the same block size of 8 bytes (2 words)
-            # We need to construct a proper block for cache2
-            word_value = block_data[i]
-            
-            # Calculate the word's position in its block
-            word_offset = (word_address % self.cache2.block_size) // 4
-            
-            # Calculate the block address for this word
-            word_block_address = word_address - word_offset * 4
-            
-            # Get the block from cache2 if it exists
-            tag, index, _ = self.cache2._parse_address(word_block_address)
-            cache_set = self.cache2.sets[index]
-            
-            existing_line = None
-            for line in cache_set.lines:
-                if line.tag == tag:
-                    existing_line = line
-                    break
-            
-            if existing_line is not None:
-                # Update existing block
-                existing_line.block[word_offset] = word_value
-            else:
-                # Create new block
-                new_block = [0] * (self.cache2.block_size // 4)
-                new_block[word_offset] = word_value
-                
-                # Store to cache2
-                self.cache2.replaceCacheLine(word_block_address, new_block)
-
-    # Excluisve
-    def Cache2TOCache1(self, effective_address: int):
-    # Calculate the start address of the block for cache1
-        block_address = effective_address // self.cache1.block_size * self.cache1.block_size
-        
-        # Prepare the block data for cache1
-        block_data = []
-        
-        # Keep track of cache2 lines that need to be invalidated
-        cache2_lines_to_invalidate = []
-        
-        for i in range(self.cache1.block_size // 4):
-            word_address = block_address + i * 4
-            found, value = self.cache2.findCache(word_address)
-            if found:
-                block_data.append(value)
-                # Store the address to invalidate it later in cache2
-                tag, index, _ = self.cache2._parse_address(word_address)
-                cache2_lines_to_invalidate.append((tag, index))
-            else:
-                # If any part is missing from cache2, read from memory
-                block_data.append(self.mem.read_word(word_address))
-        
-        # Get tag and index for the target set in cache1
-        tag, index, _ = self.cache1._parse_address(block_address)
-        cache_set = self.cache1.sets[index]
-        
-        # Find the LRU line to replace
-        victim = cache_set.lru[0]  # Get the LRU line
-        cache_set.lru.remove(victim)  # Remove from LRU order
-        
-        # If the victim has valid data, move it to cache2 before overwriting
-        if victim.tag is not None:
-            victim_block_address = victim.tag * (self.cache1.block_size * self.cache1.num_sets) + index * self.cache1.block_size
-            self.Cache1TOCache2(victim_block_address, victim.block.copy())
-        
-        # Update the victim line with the new data
-        victim.tag = tag
-        victim.block = block_data.copy()
-        
-        # Move the updated line to the MRU position
-        cache_set.lru.append(victim)
     
-        # Now invalidate the lines in cache2 that were moved to cache1
-        for tag, index in cache2_lines_to_invalidate:
-            cache_set = self.cache2.sets[index]
-            for line in cache_set.lines:
-                if line.tag == tag:
-                    # Invalidate this line
-                    line.tag = None
-                    line.block = [0] * (self.cache2.block_size // 4)
-                    # Optionally update LRU status
-                    if line in cache_set.lru:
-                        cache_set.lru.remove(line)
-                        cache_set.lru.appendleft(line)  # Move to LRU position
-                    break                                                                                        
-    
-    # Inclusive
-    # def Cache2TOCache1(self, effective_address: int):
-    # # Calculate the start address of the block for cache1
-    #     block_address = effective_address // self.cache1.block_size * self.cache1.block_size
+    def cache_controller(self, address, data, operation):
+        if operation == 0:  # Load operation
+            # Check cache1 cache first
+            data = self.cache1.fetch(address)
+            if data is None:
+                data = self.cache2.fetch(address)
+                if data is None:
+                    data = self.mem.read_word(address)
+                    temp_data_array=[0]*(self.cache_block_size//4)
+                    for i in range(self.cache_block_size//4):
+                        temp_data_array[i]=self.mem.read_word(address//4+i)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+                else:
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+            return data
+        elif operation == 1:  # Store operation
+            # Store in cache1 cache first
+            success=self.cache1.store(address, data)
 
-    #     # Prepare the block data for cache1
-    #     block_data = []
-
-    #     for i in range(self.cache1.block_size // 4):
-    #         word_address = block_address + i * 4
-    #         found, value = self.cache2.findCache(word_address)
-    #         if found:
-    #             block_data.append(value)
-    #         else:
-    #             # If any part is missing from cache2, read from memory and write to cache2
-    #             value = self.mem.read_word(word_address)
-    #             block_data.append(value)
-
-    #             # Write the fetched word to cache2 to maintain inclusion
-    #             self.cache2.update_word(word_address, value)  # You must have a `.write()` method
-
-    #     # Get tag and index for the target set in cache1
-    #     tag, index, _ = self.cache1._parse_address(block_address)
-    #     cache_set = self.cache1.sets[index]
-
-    #     # Find the LRU line to replace
-    #     victim = cache_set.lru[0]
-    #     cache_set.lru.remove(victim)
-
-    #     # No need to move evicted line back to cache2 — it’s already there
-
-    #     # Update the victim line with the new data
-    #     victim.tag = tag
-    #     victim.block = block_data.copy()
-
-    #     # Move the updated line to MRU
-    #     cache_set.lru.append(victim)
-
-    #     # INCLUSIVE: Ensure cache2 still contains this block (if not already)
-    #     for i in range(self.cache1.block_size // 4):
-    #         word_address = block_address + i * 4
-    #         self.cache2.update_word(word_address, block_data[i])  # Maintain inclusion
-
-    def print_cache(self):
-        print("Cache 1:")
-        for i, cache_set in enumerate(self.cache1.sets):
-            print(f"Set {i}:")
-            for line in cache_set.lines:
-                print(f"  Tag: {line.tag}, Block: {line.block}")
-
-        print("\nCache 2:")
-        for i, cache_set in enumerate(self.cache2.sets):
-            print(f"Set {i}:")
-            for line in cache_set.lines:
-                print(f"  Tag: {line.tag}, Block: {line.block}")
+            # DONT FORGET TO UPDATE THE MEMORY AFTER END OF SIMULATION,you SHOULD DO IT 
+            self.mem.write_word(address, data)
+            print("success cache1",success)
+            if success== False:
+                # If cache1 cache miss, store in cache2 cache
+                success=self.cache2.store(address, data)
+                print("success cache2",success)
+                if success==False:
+                    # If cache2 cache miss, store in main memory
+                    self.mem.write_word(address, data)
+                    # Store in cache1 cache for consistency
+                    temp_data_array=[0]*(self.cache_block_size//4)
+                    for i in range(self.cache_block_size//4):
+                        temp_data_array[i]=self.mem.read_word(address//4+i)
+                    print("temp data array",temp_data_array)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+                else:
+                    # If cache2 cache hit, update cache1 cache
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)    
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+            # Also store in cache2 cache for consistenc
         
     def run_simulator(self, assembly_file: str):
         def decimal_to_hex(n: int) -> str:
@@ -464,7 +219,6 @@ class Simulator:
                 core = self.cores[i]
                 core.execute_instruction(self.mem, self.fetch_ins, self)
             self.instruction_fetch(instructions)
-            self.print_cache()
 
             fetch_possible = True
             if all(core.pc >= len(instructions) for core in self.cores):
