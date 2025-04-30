@@ -142,19 +142,19 @@ class Simulator:
                     data = self.mem.read_word(address)
                     temp_data_array=[0]*(self.cache_block_size//4)
                     for i in range(self.cache_block_size//4):
-                        temp_data_array[i]=self.mem.read_word(address//4+i)
+                        temp_data_array[i]=self.mem.read_word(address+i*4)
                     temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
                     if(temp_value_changed):
                         for i in range(self.cache_block_size//4):
-                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
                 else:
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
                     temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(temp_addr, temp_data_array,temp_value_changed)
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
                     if(temp_value_changed):
                         for i in range(self.cache_block_size//4):
-                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
             return data
         elif operation == 1:  # Store operation
             # Store in cache1 cache first
@@ -171,15 +171,16 @@ class Simulator:
                     # If cache2 cache miss, store in main memory
                     self.mem.write_word(address, data)
                     # Store in cache1 cache for consistency
+
                     temp_data_array=[0]*(self.cache_block_size//4)
                     for i in range(self.cache_block_size//4):
-                        temp_data_array[i]=self.mem.read_word(address//4+i)
+                        temp_data_array[i]=self.mem.read_word(address+i*4)
                     print("temp data array",temp_data_array)
                     temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
                     if(temp_value_changed):
                         for i in range(self.cache_block_size//4):
-                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
                 else:
                     # If cache2 cache hit, update cache1 cache
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
@@ -187,7 +188,7 @@ class Simulator:
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)    
                     if(temp_value_changed):
                         for i in range(self.cache_block_size//4):
-                            self.mem.write_word(temp_addr//4+i,temp_data_array[i])
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
             # Also store in cache2 cache for consistenc
         
     def run_simulator(self, assembly_file: str):
