@@ -6,7 +6,8 @@ import simulator
 class Core:
     def __init__(self, core_id: int):
         self.core_id = core_id
-        self.registers = [0] * 33 #33 register is the special register which has core_id
+        # 33 register is the special register which has core_id
+        self.registers = [0] * 33
         self.registers[32] = self.core_id
         self.register_active = [0] * 33
         self.pc = 0
@@ -43,7 +44,7 @@ class Core:
             return self.MEM_WB[2]
         return "False"
 
-    def get_forwarded_data(self, rd)->any:
+    def get_forwarded_data(self, rd) -> any:
         if not self.isDF:
             return "False"
         data_from_EX_MEM = self.get_data_from_EX_MEM(rd)
@@ -57,13 +58,13 @@ class Core:
                 return data_from_MEM_WB
         else:
             return data_from_EX_MEM
-    
+
     def instr_decode_reg_fetch(self, instr: Instruction, fetch_ins):
         if not self.IF_ID:
             return
-        
+
         if self.execute_prev_done == False:
-            self.stall_count+=1
+            self.stall_count += 1
             return
         # print("Decoding:", instr)
         opcode = instr.opcode
@@ -95,8 +96,9 @@ class Core:
                         return
                     else:
                         decoded_ready.append(rs1_fwd_data)
-                        decoded_ready.append(self.get_register_value(instr.rs2))
-                    
+                        decoded_ready.append(
+                            self.get_register_value(instr.rs2))
+
                 elif self.register_active[rs2_id] > 0:
                     # print("Stalling due to rs2",instr.rs2)
                     rs2_fwd_data = self.get_forwarded_data(instr.rs2)
@@ -104,7 +106,8 @@ class Core:
                         self.stall_count += 1
                         return
                     else:
-                        decoded_ready.append(self.get_register_value(instr.rs1))
+                        decoded_ready.append(
+                            self.get_register_value(instr.rs1))
                         decoded_ready.append(rs2_fwd_data)
             else:
                 decoded_ready.append(self.get_register_value(instr.rs1))
@@ -179,7 +182,8 @@ class Core:
                         self.stall_count += 1
                         return
                     else:
-                        decoded_ready.append(self.get_register_value(instr.rs2))
+                        decoded_ready.append(
+                            self.get_register_value(instr.rs2))
                         decoded_ready.append(instr.immediate)
                         decoded_ready.append(rs1_fwd_data)
                 elif self.register_active[rs2_id] > 0:
@@ -191,7 +195,8 @@ class Core:
                     else:
                         decoded_ready.append(rs2_fwd_data)
                         decoded_ready.append(instr.immediate)
-                        decoded_ready.append(self.get_register_value(instr.rs1))
+                        decoded_ready.append(
+                            self.get_register_value(instr.rs1))
             # For sw, store the source value, then immediate, then base register value:
             else:
                 src_val = self.get_register_value(instr.rs2)
@@ -230,7 +235,8 @@ class Core:
                         return
                     else:
                         decoded_ready.append(rs1_fwd_data)
-                        decoded_ready.append(self.get_register_value(instr.rs2))
+                        decoded_ready.append(
+                            self.get_register_value(instr.rs2))
                         decoded_ready.append(instr.label)
                 elif self.register_active[rs2_id] > 0:
                     # print("Stalling due to rs2",instr.rs2)
@@ -239,7 +245,8 @@ class Core:
                         self.stall_count += 1
                         return
                     else:
-                        decoded_ready.append(self.get_register_value(instr.rs1))
+                        decoded_ready.append(
+                            self.get_register_value(instr.rs1))
                         decoded_ready.append(rs2_fwd_data)
                         decoded_ready.append(instr.label)
             else:
@@ -255,13 +262,13 @@ class Core:
 
         elif opcode == "j":
             decoded_ready.append(instr.label)
-        
+
         elif opcode == "li":
             rd_id = int(instr.rd[1:])
             decoded_ready.append(instr.rd)
             decoded_ready.append(instr.immediate)
-            self.register_active[rd_id] += 1 
-        
+            self.register_active[rd_id] += 1
+
         elif opcode == "ecall":
             pass
 
@@ -363,10 +370,10 @@ class Core:
             new_pc = self.labels_map[label]
             simulator.Simulator.new_pc[self.core_id] = new_pc
             simulator.Simulator.pc_changed[self.core_id] = True
-        
+
         elif opcode == "li":
-            execute_ready = EX_Stage 
-        
+            execute_ready = EX_Stage
+
         elif opcode == "ecall":
             if self.isWB or self.MEM_WB or self.EX_MEM:
                 self.stall_count += 1
@@ -385,7 +392,7 @@ class Core:
             self.memory_remaining_time = 0
         self.EX_MEM = execute_ready
 
-    def memory_access(self, memory):
+    def memory_access(self, memory, Simulator):
         MEM_Stage = self.EX_MEM
         if not MEM_Stage:
             return
@@ -400,14 +407,15 @@ class Core:
 
         if opcode == "lw":
             effective_addr = int(MEM_Stage[2])
-            memory_value = memory.read_word(effective_addr)
+            print("Hey, effective_addr:", effective_addr)
+            memory_value = Simulator.cache_controller(effective_addr,None,0)
             memory_ready.append(MEM_Stage[1])
             memory_ready.append(memory_value)
             self.MEM_WB = memory_ready
         elif opcode == "sw":
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
-            memory.write_word(effective_addr, value)
+            Simulator.cache_controller(effective_addr, value,1)
             self.MEM_WB = memory_ready
         else:
             self.MEM_WB = MEM_Stage
@@ -423,21 +431,21 @@ class Core:
         opcode = WB_Stage[0]
         # print("WB:", WB_Stage)
 
-        if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal","li"]:
+        if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal", "li"]:
             value = int(WB_Stage[2])
             reg_id = int(WB_Stage[1][1:])
             # print(reg_id)
             self.set_register_value(WB_Stage[1], value)
             self.register_active[reg_id] -= 1
-        
+
         self.instruction_count += 1
         self.isWB = True
         self.MEM_WB = []
 
-    def execute_instruction(self, memory, fetch_ins):
+    def execute_instruction(self, memory, fetch_ins, Simulator):
         # print("---new_cycle--- core id:",self.core_id)
         self.write_back()
-        self.memory_access(memory)
+        self.memory_access(memory, Simulator)
         self.execute()
         if self.IF_ID is not None:
             self.instr_decode_reg_fetch(self.IF_ID, fetch_ins)

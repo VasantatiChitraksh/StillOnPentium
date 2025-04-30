@@ -1,40 +1,50 @@
 import sys
+from cache import Cache
 from memory import Memory
 import core
 from asm_parser import parse_assembly_file
 
-class Simulator:
 
+class Simulator:
     pc_changed = [False] * 4
     new_pc = [0] * 4
     clock = 0
     fetch_ins = [True] * 4
+
     def __init__(self):
+        self.cache_block_size = 8  # bytes
+        cache_size = 64
+        associativity = 4
+        self.cache1 = Cache(cache_size, self.cache_block_size, associativity)
+        self.cache_instruction = Cache(cache_size, self.cache_block_size, associativity)
+        self.cache2 = Cache(cache_size, self.cache_block_size, associativity)
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
-        self.cores = [core.Core(core_id=i) for i in range(4)]  # Initialize cores
+        self.cores = [core.Core(core_id=i)
+                      for i in range(4)]  # Initialize cores
         self.latency_config = {
-            'add':1,
-            'mul':1,
-            'sub':1,
-            'lw':1,
-            'sw':1,
-            'bne':1,
-            'beq':1,
-            'bge':1,
-            'la':1,
-            'li':1,
-            'addi':1,
-            'slli':1,
-            'j':1,
-            'jal':1,
-            'jalr':1
+            'add': 1,
+            'mul': 1,
+            'sub': 1,
+            'lw': 1,
+            'sw': 1,
+            'bne': 1,
+            'beq': 1,
+            'bge': 1,
+            'la': 1,
+            'li': 1,
+            'addi': 1,
+            'slli': 1,
+            'j': 1,
+            'jal': 1,
+            'jalr': 1
         }
         self.instruction_fetch_stall = []
-        self.data_fwd_on = input("Do you want to enable data forwarding? (y/n): ")
-
+        self.data_fwd_on = input(
+            "Do you want to enable data forwarding? (y/n): ")
+                
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
-        address = 4096 - data_values * 4
+        address = 0
         memory.set_data_section_end(address)
         for data_instr in data_instructions:
             if data_instr.label:
@@ -43,7 +53,7 @@ class Simulator:
                 memory.write_word(address, value)
                 address += 4
         return label_map
-    
+
     def get_latency(self):
         print("Enter opcode and latency in the format: opcode latency")
         print("Type 'exit' when finished.")
@@ -52,23 +62,24 @@ class Simulator:
         while True:
             user_input = input("Enter opcode and latency: ").strip()
             if user_input.lower() == "exit":
-                break  
+                break
             try:
                 opcode, latency = user_input.split()
                 latency = int(latency)
                 if opcode in self.latency_config:
                     if latency > 0:
-                        self.latency_config[opcode] = latency  # Update if valid
+                        # Update if valid
+                        self.latency_config[opcode] = latency
                     else:
                         print("Latency must be positive.")
                 else:
-                    print(f"Invalid opcode '{opcode}'. Please enter a valid opcode.")
+                    print(
+                        f"Invalid opcode '{opcode}'. Please enter a valid opcode.")
 
             except ValueError:
                 print("Invalid format. Please enter in 'opcode latency' format.")
             except IndexError:
                 print("Please enter both opcode and latency.")
-
 
     def instruction_fetch(self, instructions):
         instructions_fetch_possible = [False] * 4
@@ -94,11 +105,11 @@ class Simulator:
         for i in range(4):
             self.cores[i].isWB = False
             if not self.fetch_ins[i]:
-                continue    
-        
+                continue
+
             if instructions_fetch_possible[i] and not self.pc_changed[i] and self.fetch_ins[i]:
                 self.fetch_ins[i] = False
-            
+
             if self.pc_changed[i]:
                 self.cores[i].pc = self.new_pc[i]
                 self.pc_changed[i] = False
@@ -120,17 +131,78 @@ class Simulator:
                 self.cores[i].pc += 1
             if self.cores[i].pc >= len(instructions):
                 continue
+    
+    def cache_controller(self, address, data, operation):
+        if operation == 0:  # Load operation
+            # Check cache1 cache first
+            data = self.cache1.fetch(address)
+            if data is None:
+                data = self.cache2.fetch(address)
+                if data is None:
+                    data = self.mem.read_word(address)
+                    temp_data_array=[0]*(self.cache_block_size//4)
+                    for i in range(self.cache_block_size//4):
+                        temp_data_array[i]=self.mem.read_word(address+i*4)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
+                else:
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
+            return data
+        elif operation == 1:  # Store operation
+            # Store in cache1 cache first
+            success=self.cache1.store(address, data)
 
+            # DONT FORGET TO UPDATE THE MEMORY AFTER END OF SIMULATION,you SHOULD DO IT 
+            self.mem.write_word(address, data)
+            print("success cache1",success)
+            if success== False:
+                # If cache1 cache miss, store in cache2 cache
+                success=self.cache2.store(address, data)
+                print("success cache2",success)
+                if success==False:
+                    # If cache2 cache miss, store in main memory
+                    self.mem.write_word(address, data)
+                    # Store in cache1 cache for consistency
+
+                    temp_data_array=[0]*(self.cache_block_size//4)
+                    for i in range(self.cache_block_size//4):
+                        temp_data_array[i]=self.mem.read_word(address+i*4)
+                    print("temp data array",temp_data_array)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
+                else:
+                    # If cache2 cache hit, update cache1 cache
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)    
+                    if(temp_value_changed):
+                        for i in range(self.cache_block_size//4):
+                            self.mem.write_word(temp_addr+i*4,temp_data_array[i])
+            # Also store in cache2 cache for consistenc
+        
     def run_simulator(self, assembly_file: str):
         def decimal_to_hex(n: int) -> str:
             return f"0x{n:x}"
 
         self.get_latency()
         print("\nCONSOLE\n")
-        instructions, label_map, data_instructions, data_values = parse_assembly_file(assembly_file)
+        instructions, label_map, data_instructions, data_values = parse_assembly_file(
+            assembly_file)
 
         # Initialize memory and cores
-        data_label_map = self.execute_data_instruction(data_instructions, data_values, self.mem)
+        data_label_map = self.execute_data_instruction(
+            data_instructions, data_values, self.mem)
         for core in self.cores:
             core.labels_map.update(label_map)
             core.labels_map.update(data_label_map)
@@ -145,8 +217,8 @@ class Simulator:
 
         while pipeline_active:
             for i in range(4):
-                core=self.cores[i]
-                core.execute_instruction(self.mem,self.fetch_ins)
+                core = self.cores[i]
+                core.execute_instruction(self.mem, self.fetch_ins, self)
             self.instruction_fetch(instructions)
 
             fetch_possible = True
@@ -157,7 +229,7 @@ class Simulator:
             cycle += 1
             if not fetch_possible and all(not core.IF_ID and not core.ID_EX and not core.EX_MEM and not core.MEM_WB for core in self.cores):
                 pipeline_active = False
-        
+
         print("---------------------------------------------------------------------------------------------------------")
         print("\nRegisters:")
         for i, core in enumerate(self.cores):
@@ -181,5 +253,5 @@ class Simulator:
 
         print("\nIPC For Each Core:")
         for core in self.cores:
-            print(f"Core ID:{core.core_id} | IPC:{core.instruction_count/cycle}")
-
+            print(
+                f"Core ID:{core.core_id} | IPC:{core.instruction_count/cycle}")
