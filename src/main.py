@@ -60,4 +60,4 @@ if __name__ == '__main__':
         
         # Show visualizations separately
         visualize_cores(simulator.cores)
-        visualize_memory(simulator.mem.word)
+        # visualize_memory(simulator.mem.word)

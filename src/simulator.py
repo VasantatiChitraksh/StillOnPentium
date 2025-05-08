@@ -12,12 +12,21 @@ class Simulator:
     fetch_ins = [True] * 4
 
     def __init__(self):
-        self.cache_block_size = 8  # bytes
-        cache_size = 64
-        associativity = 4
-        self.cache1 = Cache(cache_size, self.cache_block_size, associativity)
-        self.cache_instruction = Cache(cache_size, self.cache_block_size, associativity)
-        self.cache2 = Cache(cache_size, self.cache_block_size, associativity)
+        self.instruction_address_start = 512
+        self.L1_Instr_Latency = 2
+        self.L1_Data_Latency = 2
+        self.L2_Latency = 4
+        self.main_merory_Latency = 10
+        self.L1_Instr_cache_size = 64  
+        self.L1_Instr_cache_associativity = 4
+        self.L1_Data_cache_size = 64
+        self.L1_Data_cache_associativity = 4
+        self.L2_cache_size = 128
+        self.L2_cache_associativity = 4
+        self.cache_block_size = 8 
+        self.cache1 = Cache(self.L1_Data_cache_size, self.cache_block_size, self.L1_Data_cache_associativity)
+        self.cache_instruction = Cache(self.L1_Instr_cache_size, self.cache_block_size, self.L1_Instr_cache_associativity)
+        self.cache2 = Cache(self.L2_cache_size, self.cache_block_size, self.L2_cache_associativity)
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
         self.cores = [core.Core(core_id=i)
                       for i in range(4)]  # Initialize cores
@@ -80,6 +89,56 @@ class Simulator:
                 print("Invalid format. Please enter in 'opcode latency' format.")
             except IndexError:
                 print("Please enter both opcode and latency.")
+    
+    def get_cache_latency(self):
+        print("Enter cache latency in the format: cache_type latency")
+        print("Type 'exit' when finished.")
+        print("Available cache types: L1_Instr, L1_Data, L2")
+
+        while True:
+            user_input = input("Enter cache type and latency: ").strip()
+            if user_input.lower() == "exit":
+                break
+            try:
+                cache_type, latency = user_input.split()
+                latency = int(latency)
+                if cache_type in ["L1_Instr", "L1_Data", "L2"]:
+                    if latency > 0:
+                        # Update if valid
+                        if cache_type == "L1_Instr":
+                            self.L1_Instr_Latency = latency
+                        elif cache_type == "L1_Data":
+                            self.L1_Data_Latency = latency
+                        elif cache_type == "L2":
+                            self.L2_Latency = latency
+                    else:
+                        print("Latency must be positive.")
+                else:
+                    print(
+                        f"Invalid cache type '{cache_type}'. Please enter a valid cache type.")
+
+            except ValueError:
+                print("Invalid format. Please enter in 'cache_type latency' format.")
+            except IndexError:
+                print("Please enter both cache type and latency.")
+    
+    def cache_latency(self, address, operation):
+        latency = 0
+        if operation == 0 or operation == 1:
+            latency += self.L1_Data_Latency
+            if self.cache1.check_cache(address) == False:
+                latency += self.L2_Latency
+                if self.cache2.check_cache(address) == False:
+                    latency += self.main_merory_Latency
+        
+        elif operation == 2:
+            latency += self.L1_Instr_Latency
+            if self.cache_instruction.check_cache(address) == False:
+                latency += self.L2_Latency
+                if self.cache2.check_cache(address) == False:
+                    latency += self.main_merory_Latency
+        
+        return latency
 
     def instruction_fetch(self, instructions):
         instructions_fetch_possible = [False] * 4
@@ -88,11 +147,6 @@ class Simulator:
             instructions_fetch_possible = [True] * 4
             self.instruction_fetch_stall = []
         else:
-            # if not self.instruction_fetch_stall:
-            #     self.instruction_fetch_stall.extend(range(4))
-
-            # core_id = self.instruction_fetch_stall.pop(0)
-            # instructions_fetch_possible[core_id] = True
             if not self.instruction_fetch_stall:
                 for i in range(4):
                     if self.cores[i].pc >= len(instructions):
@@ -128,6 +182,8 @@ class Simulator:
                 if self.cores[i].pc >= len(instructions):
                     continue
                 self.cores[i].IF_ID = instructions[self.cores[i].pc]
+                instruction_address = self.cores[i].pc * 4 + self.instruction_address_start
+                self.cache_controller(instruction_address,None,2)
                 self.cores[i].pc += 1
             if self.cores[i].pc >= len(instructions):
                 continue
@@ -191,16 +247,36 @@ class Simulator:
                             self.mem.write_word(temp_addr+i*4,temp_data_array[i])
             # Also store in cache2 cache for consistenc
         
+        elif operation == 2:  # Instruction fetch operation
+            instr = self.cache_instruction.fetch(address)
+            if instr is None:
+                instr = self.cache2.fetch(address)
+                if instr is None:
+                    instr = self.mem.read_word(address)
+                    temp_data_array=[0]*(self.cache_block_size//4)
+                    for i in range(self.cache_block_size//4):
+                        temp_data_array[i]=self.mem.read_word(address+i*4)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache_instruction.replace_line(address, temp_data_array,False)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                else:
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.get_line_data(address)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache_instruction.replace_line(temp_addr, temp_data_array,temp_value_changed)
+                    temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
+            
+
     def run_simulator(self, assembly_file: str):
         def decimal_to_hex(n: int) -> str:
             return f"0x{n:x}"
 
         self.get_latency()
+        self.get_cache_latency()
         print("\nCONSOLE\n")
         instructions, label_map, data_instructions, data_values = parse_assembly_file(
             assembly_file)
 
-        # Initialize memory and cores
+        for i in range(len(instructions)):
+            self.mem.write_word(i*4 + self.instruction_address_start, instructions[i])
+
         data_label_map = self.execute_data_instruction(
             data_instructions, data_values, self.mem)
         for core in self.cores:

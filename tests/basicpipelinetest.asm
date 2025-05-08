@@ -1,6 +1,7 @@
-addi x10 x0 1
-add x2 x3 x4
-bne cid x10 label 
-addi x5 x6 3
-label: 
-addi x8 x9 3
+addi x1 x0 1
+addi x2 x0 2
+
+sw x1 0(x0)
+sw x2 8(x0)
+lw x3 0(x0)
+lw x4 8(x0)

@@ -25,6 +25,7 @@ class Core:
         self.isDF = False
         self.latency_map = {}
         self.isWB = False
+        self.cache_stall = True
 
     def get_data_from_EX_MEM(self, rd) -> any:
         if not self.EX_MEM:
@@ -408,14 +409,26 @@ class Core:
         if opcode == "lw":
             effective_addr = int(MEM_Stage[2])
             print("Hey, effective_addr:", effective_addr)
-            memory_value = Simulator.cache_controller(effective_addr,None,0)
+            if self.cache_stall == True:
+                latency = Simulator.cache_latency(effective_addr, 0)
+                self.memory_remaining_time = latency-1
+                self.cache_stall = False
+                return
+            memory_value = Simulator.cache_controller(effective_addr, None, 0)
+            self.cache_stall = True
             memory_ready.append(MEM_Stage[1])
             memory_ready.append(memory_value)
             self.MEM_WB = memory_ready
         elif opcode == "sw":
             effective_addr = int(MEM_Stage[2])
             value = int(MEM_Stage[1])
-            Simulator.cache_controller(effective_addr, value,1)
+            if self.cache_stall == True:
+                latency = Simulator.cache_latency(effective_addr, 1)
+                self.memory_remaining_time = latency-1
+                self.cache_stall = False
+                return
+            Simulator.cache_controller(effective_addr, value, 1)
+            self.cache_stall = True
             self.MEM_WB = memory_ready
         else:
             self.MEM_WB = MEM_Stage
