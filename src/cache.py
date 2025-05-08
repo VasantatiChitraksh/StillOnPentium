@@ -48,6 +48,19 @@ class Cache:
             
         return None
     
+    def check_cache(self, address):
+        tag = address >> (self.index_bits_length + self.offset_bits_length)
+        index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
+        offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
+
+        for i in range(len(self.c[index].cache_set)):
+            cache_line= self.c[index].cache_set[i]
+            if cache_line.tag == tag :
+                # Cache hit
+                return True
+            
+        return False
+    
     def store(self, address, data):
         tag = address >> (self.index_bits_length + self.offset_bits_length)
         index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
