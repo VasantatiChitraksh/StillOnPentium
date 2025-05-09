@@ -48,6 +48,7 @@ class Simulator:
             'jalr': 1
         }
         self.instruction_fetch_stall = []
+        self.sync_reached = [False]*4
         self.data_fwd_on = input(
             "Do you want to enable data forwarding? (y/n): ")
                 
@@ -145,14 +146,21 @@ class Simulator:
 
         if self.cores[0].pc == self.cores[1].pc == self.cores[2].pc == self.cores[3].pc:
             instructions_fetch_possible = [True] * 4
+            if self.sync_reached[0] == True:
+                for i in range(4):
+                    self.sync_reached[i] = False
             self.instruction_fetch_stall = []
         else:
             if not self.instruction_fetch_stall:
                 for i in range(4):
                     if self.cores[i].pc >= len(instructions):
                         continue
-                    self.instruction_fetch_stall.append(i)
+                    if self.sync_reached[i] == False:
+                        self.instruction_fetch_stall.append(i)
 
+            if len(self.instruction_fetch_stall) == 0:
+                print("You have tried to use sync in the wrong way after a core has skipped sync it can't reach it since it can't go back in time so use it properly.")
+                exit()
             core_id = self.instruction_fetch_stall.pop(0)
             instructions_fetch_possible[core_id] = True
 
@@ -182,6 +190,8 @@ class Simulator:
                 if self.cores[i].pc >= len(instructions):
                     continue
                 self.cores[i].IF_ID = instructions[self.cores[i].pc]
+                if self.cores[i].IF_ID.opcode == "sync":
+                    self.sync_reached[i] = True
                 instruction_address = self.cores[i].pc * 4 + self.instruction_address_start
                 self.cache_controller(instruction_address,None,2)
                 self.cores[i].pc += 1
@@ -218,11 +228,11 @@ class Simulator:
 
             # DONT FORGET TO UPDATE THE MEMORY AFTER END OF SIMULATION,you SHOULD DO IT 
             self.mem.write_word(address, data)
-            print("success cache1",success)
+            # print("success cache1",success)
             if success== False:
                 # If cache1 cache miss, store in cache2 cache
                 success=self.cache2.store(address, data)
-                print("success cache2",success)
+                # print("success cache2",success)
                 if success==False:
                     # If cache2 cache miss, store in main memory
                     self.mem.write_word(address, data)
@@ -231,7 +241,7 @@ class Simulator:
                     temp_data_array=[0]*(self.cache_block_size//4)
                     for i in range(self.cache_block_size//4):
                         temp_data_array[i]=self.mem.read_word(address+i*4)
-                    print("temp data array",temp_data_array)
+                    # print("temp data array",temp_data_array)
                     temp_addr,temp_data_array,temp_value_changed=self.cache1.replace_line(address, temp_data_array,False)
                     temp_addr,temp_data_array,temp_value_changed=self.cache2.replace_line(temp_addr, temp_data_array,temp_value_changed)
                     if(temp_value_changed):
@@ -294,7 +304,7 @@ class Simulator:
         while pipeline_active:
             for i in range(4):
                 core = self.cores[i]
-                core.execute_instruction(self.mem, self.fetch_ins, self)
+                core.execute_instruction(self.fetch_ins, self)
             self.instruction_fetch(instructions)
 
             fetch_possible = True

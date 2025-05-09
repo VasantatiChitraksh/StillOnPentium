@@ -157,6 +157,8 @@ def parse_instruction_line(line: str) -> Instruction:
         instr.label = tokens[1]
     elif opcode in ["ecall"]:
         pass
+    elif opcode in ["sync"]:
+        pass
     else:
         raise ValueError(f"OpCode not implemented yet:{line}")
     return instr
