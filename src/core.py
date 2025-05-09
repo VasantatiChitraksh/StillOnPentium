@@ -393,7 +393,7 @@ class Core:
             self.memory_remaining_time = 0
         self.EX_MEM = execute_ready
 
-    def memory_access(self, memory, Simulator):
+    def memory_access(self,Simulator):
         MEM_Stage = self.EX_MEM
         if not MEM_Stage:
             return
@@ -408,7 +408,7 @@ class Core:
 
         if opcode == "lw":
             effective_addr = int(MEM_Stage[2])
-            print("Hey, effective_addr:", effective_addr)
+            # print("Hey, effective_addr:", effective_addr)
             if self.cache_stall == True:
                 latency = Simulator.cache_latency(effective_addr, 0)
                 self.memory_remaining_time = latency-1
@@ -455,10 +455,10 @@ class Core:
         self.isWB = True
         self.MEM_WB = []
 
-    def execute_instruction(self, memory, fetch_ins, Simulator):
+    def execute_instruction(self, fetch_ins, Simulator):
         # print("---new_cycle--- core id:",self.core_id)
         self.write_back()
-        self.memory_access(memory, Simulator)
+        self.memory_access(Simulator)
         self.execute()
         if self.IF_ID is not None:
             self.instr_decode_reg_fetch(self.IF_ID, fetch_ins)

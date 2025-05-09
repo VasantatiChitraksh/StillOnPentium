@@ -1,7 +1,15 @@
-addi x1 x0 1
+.data 
+arr: .word 0x1 0x2 0x3 0x4 0x5
+
+.text
+beq x0 cid exit
 addi x2 x0 2
 
-sw x1 0(x0)
-sw x2 8(x0)
-lw x3 0(x0)
-lw x4 8(x0)
+goto:
+    sync
+    addi x4 x0 5
+    addi a0 x0 5
+
+exit:
+    li a7 1
+    ecall
