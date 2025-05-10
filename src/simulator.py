@@ -5,7 +5,6 @@ import core
 from asm_parser import parse_assembly_file
 import math
 
-
 class Simulator:
     pc_changed = [False] * 4
     new_pc = [0] * 4
@@ -13,27 +12,32 @@ class Simulator:
     fetch_ins = [True] * 4
 
     def __init__(self):
+        self.replacement_policy = input(
+            "Enter replacement policy (0 for LRU, 1 for NRU): ")
         self.instruction_address_start = 512
         self.L1_Instr_Latency = 2
         self.L1_Data_Latency = 2
         self.L2_Latency = 4
+        self.scratch_pad_latency = 1
         self.main_merory_Latency = 10
         self.L1_Instr_cache_size = 64
         self.L1_Instr_cache_associativity = 4
         self.L1_Data_cache_size = 64
         self.L1_Data_cache_associativity = 4
         self.L2_cache_size = 128
-        self.L2_cache_associativity = 4
+        self.L2_cache_associativity = 8
         self.cache_block_size = 8
         self.offset_bits_length = int(math.log2(self.cache_block_size))
         self.offset_mask = (1 << self.offset_bits_length) - 1
         self.cache1 = Cache(self.L1_Data_cache_size,
-                            self.cache_block_size, self.L1_Data_cache_associativity)
+                            self.cache_block_size, self.L1_Data_cache_associativity,self.replacement_policy)
         self.cache_instruction = Cache(
-            self.L1_Instr_cache_size, self.cache_block_size, self.L1_Instr_cache_associativity)
+            self.L1_Instr_cache_size, self.cache_block_size, self.L1_Instr_cache_associativity,self.replacement_policy)
         self.cache2 = Cache(self.L2_cache_size,
-                            self.cache_block_size, self.L2_cache_associativity)
+                            self.cache_block_size, self.L2_cache_associativity,self.replacement_policy)
         self.mem = Memory(size_in_bytes=4096)  # Initialize memory
+        self.scratch_pad = Memory(size_in_bytes=400)  # Initialize scratchpad
+        self.scratchpad_start = 2048
         self.cores = [core.Core(core_id=i)
                       for i in range(4)]  # Initialize cores
         self.latency_config = {
@@ -51,12 +55,38 @@ class Simulator:
             'slli': 1,
             'j': 1,
             'jal': 1,
-            'jalr': 1
+            'jalr': 1,
+            "lw_spm":1,
+            "sw_spm":1
         }
         self.instruction_fetch_stall = []
         self.sync_reached = [False]*4
         self.data_fwd_on = input(
             "Do you want to enable data forwarding? (y/n): ")
+        self.stats = {}
+
+
+    def get_scratchpad_latency(self):
+        return self.scratch_pad_latency
+    
+    def excute_scratchpad_instructions(self, scratchpad_instructions, scratchpad_values: int, memory) -> dict:
+        label_map = {}
+        address = 0
+        memory.set_data_section_end(address)
+        for scratchpad_instr in scratchpad_instructions:
+            if scratchpad_instr.label:
+                label_map[scratchpad_instr.label] = address
+            for value in scratchpad_instr.values:
+                memory.write_word(address, value)
+                address += 4
+        
+        address = self.scratchpad_start
+        self.mem.set_data_section_end(address)
+        for scratchpad_instr in scratchpad_instructions:
+            for value in scratchpad_instr.values:
+                self.mem.write_word(address, value)
+                address += 4
+        return label_map
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
         label_map = {}
@@ -129,6 +159,44 @@ class Simulator:
             except IndexError:
                 print("Please enter both cache type and latency.")
 
+    def get_cache_details(self):
+        print("Enter cache details in the format: cache_type block_size associativity cache_size")
+        print("Type 'exit' when finished.")
+        print("Available cache types: L1_Instr, L1_Data, L2")
+
+        while True:
+            user_input = input("Enter cache type, block size, associativity and cache size: ").strip()
+            if user_input.lower() == "exit":
+                break
+
+            try:
+                cache_type, block_size, associativity, cache_size = user_input.split()
+                block_size = int(block_size)
+                associativity = int(associativity)
+                cache_size = int(cache_size)
+
+                if block_size <= 0 or associativity <= 0 or cache_size <= 0:
+                    print("All values must be positive integers.")
+                    continue
+
+                if cache_type == "L1_Instr":
+                    self.cache_block_size = block_size
+                    self.L1_Instr_cache_associativity = associativity
+                    self.L1_Instr_cache_size = cache_size
+                elif cache_type == "L1_Data":
+                    self.cache_block_size = block_size
+                    self.L1_Data_cache_associativity = associativity
+                    self.L1_Data_cache_size = cache_size
+                elif cache_type == "L2":
+                    self.cache_block_size = block_size
+                    self.L2_cache_associativity = associativity
+                    self.L2_cache_size = cache_size
+                else:
+                    print("Invalid cache type. Please use L1_Instr, L1_Data, or L2.")
+
+            except ValueError:
+                print("Invalid format. Please enter in 'cache_type block_size associativity cache_size' format.")
+
     def cache_latency(self, address, operation):
         latency = 0
         if operation == 0 or operation == 1:
@@ -186,7 +254,7 @@ class Simulator:
                 if self.cores[i].ID_EX:
                     rd = self.cores[i].ID_EX[1]
                     opcode = self.cores[i].ID_EX[0]
-                    if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw"]:
+                    if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "la", "jal", "lw", "lw_spm"]:
                         rd_id = int(rd[1:])
                         self.cores[i].register_active[rd_id] -= 1
                 self.cores[i].ID_EX = []
@@ -308,25 +376,66 @@ class Simulator:
                     temp_addr, temp_data_array, temp_value_changed = self.cache2.replace_line(
                         temp_addr, temp_data_array, temp_value_changed)
 
+    def print_cache_statistics(self):
+        # Column titles
+        self.stats = {
+            "L1_Data": {
+                "access": self.cache1.access,
+                "misses": self.cache1.misses,
+                "hits": self.cache1.access - self.cache1.misses,
+                "hit_rate": round(((self.cache1.access - self.cache1.misses) / self.cache1.access) * 100, 2) if self.cache1.access > 0 else 0,
+                "miss_rate": round((self.cache1.misses / self.cache1.access) * 100, 2) if self.cache1.access > 0 else 0
+            },
+            "L1_Instr": {
+                "access": self.cache_instruction.access,
+                "misses": self.cache_instruction.misses,
+                "hits": self.cache_instruction.access - self.cache_instruction.misses,
+                "hit_rate": round(((self.cache_instruction.access - self.cache_instruction.misses) / self.cache_instruction.access) * 100, 2) if self.cache_instruction.access > 0 else 0,
+                "miss_rate": round((self.cache_instruction.misses / self.cache_instruction.access) * 100, 2) if self.cache_instruction.access > 0 else 0
+            },
+            "L2": {
+                "access": self.cache2.access,
+                "misses": self.cache2.misses,
+                "hits": self.cache2.access - self.cache2.misses,
+                "hit_rate": round(((self.cache2.access - self.cache2.misses) / self.cache2.access) * 100, 2) if self.cache2.access > 0 else 0,
+                "miss_rate": round((self.cache2.misses / self.cache2.access) * 100, 2) if self.cache2.access > 0 else 0
+            }                               
+        }   
+        print(f"{'Stats':<15}{'L1 Data':<15}{'L1 Instruction':<20}{'L2':<10}")
+        print("-" * 60)
+
+        # Print each row with aligned formatting
+        print(f"{'Access':<15}{self.stats['L1_Data']['access']:<15}{self.stats['L1_Instr']['access']:<20}{self.stats['L2']['access']:<10}")
+        print(f"{'Misses':<15}{self.stats['L1_Data']['misses']:<15}{self.stats['L1_Instr']['misses']:<20}{self.stats['L2']['misses']:<10}")
+        print(f"{'Hits':<15}{self.stats['L1_Data']['hits']:<15}{self.stats['L1_Instr']['hits']:<20}{self.stats['L2']['hits']:<10}")
+        print(f"{'Hit Rate (%)':<15}{self.stats['L1_Data']['hit_rate']:<15}{self.stats['L1_Instr']['hit_rate']:<20}{self.stats['L2']['hit_rate']:<10}")
+        print(f"{'Miss Rate (%)':<15}{self.stats['L1_Data']['miss_rate']:<15}{self.stats['L1_Instr']['miss_rate']:<20}{self.stats['L2']['miss_rate']:<10}")
+
+
     def run_simulator(self, assembly_file: str):
         def decimal_to_hex(n: int) -> str:
             return f"0x{n:x}"
 
         self.get_latency()
         self.get_cache_latency()
+        self.get_cache_details()
         print("\nCONSOLE\n")
-        instructions, label_map, data_instructions, data_values = parse_assembly_file(
+        instructions, label_map, data_instructions, data_values, scratchpad_instructions, scratchpad_values = parse_assembly_file(
             assembly_file)
 
         for i in range(len(instructions)):
             self.mem.write_word(
                 i*4 + self.instruction_address_start, instructions[i])
 
+        scratchpad_label_map = self.excute_scratchpad_instructions(
+            scratchpad_instructions,scratchpad_values, self.scratch_pad)
+        
         data_label_map = self.execute_data_instruction(
             data_instructions, data_values, self.mem)
         for core in self.cores:
             core.labels_map.update(label_map)
             core.labels_map.update(data_label_map)
+            core.labels_map.update(scratchpad_label_map)
             core.latency_map = self.latency_config
             if self.data_fwd_on == 'y':
                 core.isDF = True
@@ -347,9 +456,9 @@ class Simulator:
                 fetch_possible = False
 
             # Check if pipeline should stop
-            cycle += 1
             if not fetch_possible and all(not core.IF_ID and not core.ID_EX and not core.EX_MEM and not core.MEM_WB for core in self.cores):
                 pipeline_active = False
+            cycle += 1
 
         print("---------------------------------------------------------------------------------------------------------")
         print("\nRegisters:")
@@ -361,6 +470,13 @@ class Simulator:
         for idx in range(0, 1024, 6):
             addresses = [
                 f"{decimal_to_hex(i*4)}: {self.mem.word[i]}" for i in range(idx, min(idx + 6, 1024))]
+            print("  |  ".join(addresses))
+
+        print("\nScratch Pad")
+
+        for idx in range(0, 100, 6):
+            addresses = [
+                f"{decimal_to_hex(i*4)}: {self.scratch_pad.word[i]}" for i in range(idx, min(idx + 6, 100))]
             print("  |  ".join(addresses))
 
         # Print simulation Statistics
@@ -376,3 +492,6 @@ class Simulator:
         for core in self.cores:
             print(
                 f"Core ID:{core.core_id} | IPC:{core.instruction_count/cycle}")
+            
+        print("\nCache Statistics:")
+        self.print_cache_statistics()

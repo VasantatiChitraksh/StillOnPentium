@@ -32,9 +32,9 @@ class Core:
             return "False"
         if len(self.EX_MEM) == 1:
             return "False"
-        if rd == self.EX_MEM[1] and self.EX_MEM[0] not in ["lw", "la"]:
+        if rd == self.EX_MEM[1] and self.EX_MEM[0] not in ["lw", "la","lw_spm"]:
             return self.EX_MEM[2]
-        elif rd == self.EX_MEM[1] and self.EX_MEM[0] in ["lw", "la"]:
+        elif rd == self.EX_MEM[1] and self.EX_MEM[0] in ["lw", "la","lw_spm"]:
             return "STALL"
         return "False"
 
@@ -138,7 +138,7 @@ class Core:
             self.register_active[rd_id] += 1
             # print("ID:Value",instr.rd,self.get_register_value(instr.rd))
 
-        elif opcode == "lw":
+        elif opcode in ["lw","lw_spm"]:
             rd_id = int(instr.rd[1:])
             decoded_ready.append(instr.rd)
             # print("Decoded Offset (instr_decode_reg_fetch):", instr.immediate)
@@ -161,7 +161,7 @@ class Core:
             self.register_active[rd_id] += 1
             # print(self.get_register_value(instr.rs1))
 
-        elif opcode == "sw":
+        elif opcode in ["sw","sw_spm"]:
             rs1_id = int(instr.rs1[1:])
             rs2_id = int(instr.rs2[1:])
             if self.register_active[rs1_id] > 0 or self.register_active[rs2_id] > 0:
@@ -331,7 +331,7 @@ class Core:
                 out = self.pc + 4
             execute_ready.append(out)
 
-        elif opcode in ["lw", "sw"]:
+        elif opcode in ["lw", "sw","lw_spm","sw_spm"]:
             offset = int(EX_Stage[2])
             # print("Offset Before Execution:", offset)
             if offset % 4 != 0:
@@ -387,7 +387,7 @@ class Core:
         self.ID_EX = []
         self.execute_prev_done = True
         self.mem_done = False
-        if opcode in ["lw", "sw", "la"] and opcode in self.latency_map:
+        if opcode in ["lw", "sw", "la","lw_spm","sw_spm"] and opcode in self.latency_map:
             self.memory_remaining_time = self.latency_map[opcode]-1
         else:
             self.memory_remaining_time = 0
@@ -430,6 +430,30 @@ class Core:
             Simulator.cache_controller(effective_addr, value, 1)
             self.cache_stall = True
             self.MEM_WB = memory_ready
+        elif opcode == "lw_spm":
+            effective_addr = int(MEM_Stage[2])
+            if self.cache_stall == True:
+                latency = Simulator.get_scratchpad_latency()
+                self.memory_remaining_time = latency-1
+                self.cache_stall = False
+                return
+            memory_value = Simulator.scratch_pad.read_word(effective_addr)
+            memory_ready.append(MEM_Stage[1])
+            memory_ready.append(memory_value)
+            self.cache_stall = True
+            self.MEM_WB = memory_ready
+        elif opcode == "sw_spm":
+            effective_addr = int(MEM_Stage[2])
+            value = int(MEM_Stage[1])
+            if self.cache_stall == True:
+                latency = Simulator.get_scratchpad_latency()
+                self.memory_remaining_time = latency-1
+                self.cache_stall = False
+                return
+            Simulator.scratch_pad.write_word(effective_addr,value)
+            Simulator.mem.write_word(effective_addr+Simulator.scratchpad_start,value)
+            self.cache_stall = True
+            self.MEM_WB = memory_ready
         else:
             self.MEM_WB = MEM_Stage
         self.EX_MEM = []
@@ -444,7 +468,7 @@ class Core:
         opcode = WB_Stage[0]
         # print("WB:", WB_Stage)
 
-        if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal", "li"]:
+        if opcode in ["add", "sub", "mul", "addi", "jalr", "slli", "lw", "la", "jal", "li","lw_spm"]:
             value = int(WB_Stage[2])
             reg_id = int(WB_Stage[1][1:])
             # print(reg_id)

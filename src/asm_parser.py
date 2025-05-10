@@ -1,6 +1,6 @@
 from instructions import Instruction
 from data_instructions import DataInstruction
-
+from scratchpad_instructions import ScratchInstruction
 
 def clean_line(line: str) -> str:
     comment_index = line.find('#')
@@ -13,9 +13,6 @@ def is_label(line: str) -> bool:
     if (line.find(':') == -1):
         return False
     return True  # Finds if Label has : in it
-
-
-
 
 def extract_label(line: str) -> str:
     line = line.strip()
@@ -153,6 +150,25 @@ def parse_instruction_line(line: str) -> Instruction:
                 raise ValueError(f"Invalid memory format for lw/sw:{line}")
         else:
             raise ValueError(f"Invalid syntax for lw/sw:{line}")
+    
+    elif opcode in ["lw_spm","sw_spm"]:
+        if len(tokens) == 3:
+            if opcode == "lw_spm":
+                instr.rd = tokens[1]
+            else:
+                if tokens[1] == "cid":
+                    instr.rs2 = "x32"
+                else:
+                    instr.rs2 = tokens[1]
+            try:
+                offset, rest = tokens[2].split('(')
+                instr.immediate = int(offset)
+                instr.rs1 = rest[:-1]
+            except Exception as e:
+                raise ValueError(f"Invalid memory format for lw_spm/sw_spm:{line}")
+        else:
+            raise ValueError(f"Invalid syntax for lw_spm/sw_spm:{line}")
+    
     elif opcode in ["j"]:
         instr.label = tokens[1]
     elif opcode in ["ecall"]:
@@ -163,29 +179,75 @@ def parse_instruction_line(line: str) -> Instruction:
         raise ValueError(f"OpCode not implemented yet:{line}")
     return instr
 
-
-
 def parse_data_instruction_line(line: str) -> DataInstruction:
     tokens = tokenize_instruction(line)
-    if tokens[1] == ".word":
+    
+    # Check if tokens list is empty
+    if not tokens:
+        raise ValueError(f"Invalid data instruction (empty tokens): {line}")
+
+    # Handle special case for partial_sum: .word 0 0 0 0 0
+    if ":" in tokens[0] and len(tokens) == 1:
+        label = tokens[0].rstrip(':')
+        # Return a placeholder instruction and 0 value count
+        return DataInstruction(label=label, directive=".word", values=[], original_line=line), 0
+    
+    # Regular case with label: .word value1 value2...
+    if len(tokens) >= 2 and tokens[1] == ".word":
         label = tokens[0].rstrip(':')
         directive = ".word"
-        values = [int(val,0) for val in tokens[2:]]
-        return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-2
-    elif ".word" in tokens[0]:
+        values = [int(val, 0) for val in tokens[2:]]
+        return DataInstruction(label=label, directive=directive, values=values, original_line=line), len(tokens) - 2
+    
+    # Case with label:.word value1 value2...
+    elif len(tokens) >= 1 and ".word" in tokens[0]:
         cindex = tokens[0].find(":")
         label = tokens[0][0:cindex]
         directive = ".word"
-        values = [int(val,0) for val in tokens[1:]]
-        return DataInstruction(label=label, directive=directive, values=values, original_line=line),len(tokens)-1
+        values = [int(val, 0) for val in tokens[1:]]
+        return DataInstruction(label=label, directive=directive, values=values, original_line=line), len(tokens) - 1
+    
+    # Case with just a label (no values)
+    elif ":" in tokens[0]:
+        label = tokens[0].rstrip(':')
+        return DataInstruction(label=label, directive=".word", values=[], original_line=line), 0
+    
     else:
         raise ValueError(f"Invalid data instruction: {line}")
     
+def parse_scratch_pad(line: str) -> ScratchInstruction:
+    tokens = tokenize_instruction(line)
+    
+    # Check if tokens list is empty
+    if not tokens:
+        raise ValueError(f"Invalid scratch instruction (empty tokens): {line}")
+        
+    # Handle special case for empty directive
+    if len(tokens) == 1 and ":" in tokens[0]:
+        label = tokens[0].rstrip(':')
+        return ScratchInstruction(label=label, directive=".word", values=[], original_line=line), 0
 
+    if len(tokens) >= 2 and tokens[1] == ".word":
+        label = tokens[0].rstrip(':')
+        directive = ".word"
+        values = [int(val, 0) for val in tokens[2:]]
+        return ScratchInstruction(label=label, directive=directive, values=values, original_line=line), len(tokens) - 2
+    
+    elif len(tokens) >= 1 and ".word" in tokens[0]:
+        cindex = tokens[0].find(":")
+        label = tokens[0][0:cindex]
+        directive = ".word"
+        values = [int(val, 0) for val in tokens[1:]]
+        return ScratchInstruction(label=label, directive=directive, values=values, original_line=line), len(tokens) - 1
+    
+    else:
+        raise ValueError(f"Invalid scratch instruction: {line}")
+    
 def parse_assembly_file(file_path: str):
     instructions = []
     global_label_map = {}
     data_instructions = []
+    scratch_instructions = []
 
     with open(file_path, 'r') as f:
         lines = f.readlines()
@@ -193,7 +255,9 @@ def parse_assembly_file(file_path: str):
     instruction_counter = 0
     in_data_section = False
     in_text_section = True
+    in_scratch_section = False
     data_values = 0
+    scratch_value = 0
 
     for line in lines:
         cline = clean_line(line)
@@ -203,19 +267,30 @@ def parse_assembly_file(file_path: str):
         if cline == '.data':
             in_data_section = True
             in_text_section = False
+            in_scratch_section = False
             continue
         elif cline == '.text':
             in_data_section = False
             in_text_section = True
+            in_scratch_section = False
+            continue
+        elif cline == '.scratchpad':
+            in_data_section = False
+            in_text_section = False
+            in_scratch_section = True
             continue
 
         if in_data_section:
-            data_instr,i = parse_data_instruction_line(cline)
-            if data_instr:
-                data_instructions.append(data_instr)
-                data_values += i
-
+            try:
+                data_instr, i = parse_data_instruction_line(cline)
+                if data_instr:
+                    data_instructions.append(data_instr)
+                    data_values += i
+            except ValueError as e:
+                print(f"Error parsing data instruction: {e}")
+                
         elif in_text_section:
+            try:
                 if is_label(cline):
                     label, linstr = extract_label(cline)
                     global_label_map[label] = instruction_counter
@@ -230,8 +305,16 @@ def parse_assembly_file(file_path: str):
                     if instr:
                         instructions.append(instr)
                         instruction_counter += 1
-    
+            except ValueError as e:
+                print(f"Error parsing text instruction: {e}")
+                
+        elif in_scratch_section:
+            try:
+                scratch_instr, i = parse_scratch_pad(cline)
+                if scratch_instr:
+                    scratch_instructions.append(scratch_instr)
+                    scratch_value += i
+            except ValueError as e:
+                print(f"Error parsing scratch instruction: {e}")
 
-
-
-    return instructions, global_label_map, data_instructions, data_values
+    return instructions, global_label_map, data_instructions, data_values, scratch_instructions, scratch_value
