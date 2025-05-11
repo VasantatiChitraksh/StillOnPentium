@@ -51,11 +51,12 @@ def visualize_memory(memory):
     plt.show()
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print("Usage: python run.py <assembly_file>")
     else:
         assembly_file = sys.argv[1]
-        simulator = Simulator()
+        cache_param_file = sys.argv[2]
+        simulator = Simulator(cache_param_file)
         simulator.run_simulator(assembly_file)
         
         # Show visualizations separately

@@ -1,15 +1,8 @@
 .scratchpad
-head:.word 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25  
-     .word 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50
-     .word 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 
-     .word 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100
+head: .word 1 2 3 4 5 6 7 8 9 10 11 12 26 27 28 29 30 31 32 33 34 35 36 37 51 52 53 54 55 56 57 58 59 60 61 62 76 77 78 79 80 81 82 83 84 85 86 87
 
 .data 
-arr: .word 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125  
-     .word 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150  
-     .word 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175  
-     .word 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200  
-
+arr: .word 13 14 15 16 17 18 19 20 21 22 23 24 25 38 39 40 41 42 43 44 45 46 47 48 49 50 63 64 65 66 67 68 69 70 71 72 73 74 75 88 89 90 91 92 93 94 95 96 97 98 99 100
 
 partial_sum: .word 0 0 0 0 0
 
@@ -22,14 +15,14 @@ la x30  partial_sum              # Address to store partial sum
 
 # Calculate offset for arr based on cid
 # Each cid processes 13 elements from normal memory
-addi x3  x0  25                  # Each cid gets 13 elements from arr
+addi x3  x0  13                  # Each cid gets 13 elements from arr
 mul x4  x3  x2                   # offset = 13 * cid
 slli x4  x4  2                   # Convert to byte offset (x4)
 add x1  x1  x4                   # x1 = &arr[cid * 13]
 
 # Calculate offset for scratchpad based on cid
 # Each cid processes 12 elements from scratchpad
-addi x5  x0  25                  # Each cid gets 12 elements from scratchpad
+addi x5  x0  12                  # Each cid gets 12 elements from scratchpad
 mul x6  x5  x2                   # offset = 12 * cid
 slli x6  x6  2                   # Convert to byte offset (x4)
 add x12  x12  x6                 # x12 = &head[cid * 12]
@@ -40,7 +33,7 @@ mul x4  x3  x2                   # offset = 4 * cid
 add x30  x30  x4                 # x30 = &partial_sum[cid]
 
 # Sum from scratchpad (head) first: 12 elements per cid
-addi x25  x0  25                 # 12 elements per cid from scratchpad
+addi x25  x0  12                 # 12 elements per cid from scratchpad
 addi x26  x0  0                  # i = 0
 addi x27  x0  0                  # sum_head = 0
 
@@ -54,7 +47,7 @@ loop_spm:
     j loop_spm
 
 next:
-    addi x5  x0  25              # 13 elements per cid from arr
+    addi x5  x0  13              # 13 elements per cid from arr
     addi x6  x0  0               # i = 0
     add x7  x0  x27              # Initialize sum with scratchpad sum
 

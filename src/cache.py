@@ -21,10 +21,22 @@ class Cache:
         self.block_size = block_size
         self.associativity = associativity
         self.replacement_policy = replacement_policy  # 0 for LRU, 1 for NRU
+        
+        # Calculate cache parameters correctly for any cache size
         self.number_of_blocks = self.cache_size // self.block_size
         self.number_of_sets = self.number_of_blocks // self.associativity
-        self.offset_bits_length = int(math.ceil(math.log2(self.block_size)))
-        self.index_bits_length = int(math.ceil(math.log2(self.number_of_sets)))
+        
+        # Calculate bit lengths properly
+        self.offset_bits_length = int(math.log2(self.block_size))
+        # Handle non-power-of-2 number of sets by using the next power of 2
+        if self.number_of_sets & (self.number_of_sets - 1) == 0:
+            # Power of 2
+            self.index_bits_length = int(math.log2(self.number_of_sets))
+        else:
+            # Not a power of 2, use next power of 2
+            self.index_bits_length = int(math.log2(self.number_of_sets)) + 1
+            
+        # Create the actual sets based on calculated number of sets
         self.c = [CacheSet(self.associativity, self.block_size) for _ in range(self.number_of_sets)]
 
         self.lru = [[0]*self.associativity for _ in range(self.number_of_sets)] 
@@ -33,6 +45,8 @@ class Cache:
         self.misses = 0
         self.init_lru()
         self.init_nru()
+        
+        # Stats for measuring differences between associativities
 
     def init_lru(self):
         for i in range(self.number_of_sets):
@@ -44,17 +58,24 @@ class Cache:
             for j in range(self.associativity):
                 # Initially mark all bits as 0 (not used recently)
                 self.nru[i][j] = 0
+    
+    def get_index_from_address(self, address):
+        # For non-power-of-2 set counts, we need to handle index calculation differently
+        # Extract the bits that would be used for the index
+        raw_index = (address >> self.offset_bits_length) % self.number_of_sets
+        return raw_index
                           
     def fetch(self, address):
         self.access += 1
-        tag = address >> (self.index_bits_length + self.offset_bits_length)
-        index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
-        offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
+        
+        # Calculate address components
+        offset = address % self.block_size
+        index = self.get_index_from_address(address)
+        tag = address // (self.number_of_sets * self.block_size)
 
         for i in range(len(self.c[index].cache_set)):
             cache_line = self.c[index].cache_set[i]
             if cache_line.tag == tag:
-                # Cache hit
                 if self.replacement_policy == 0:  # LRU
                     self.update_lru(index, i)
                 else:  # NRU
@@ -65,9 +86,9 @@ class Cache:
         return None
     
     def check_cache(self, address):
-        tag = address >> (self.index_bits_length + self.offset_bits_length)
-        index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
-        offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
+        offset = address % self.block_size
+        index = self.get_index_from_address(address)
+        tag = address // (self.number_of_sets * self.block_size)
 
         for i in range(len(self.c[index].cache_set)):
             cache_line = self.c[index].cache_set[i]
@@ -79,25 +100,23 @@ class Cache:
     
     def store(self, address, data):
         self.access += 1
-        tag = address >> (self.index_bits_length + self.offset_bits_length)
-        index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
-        offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
+        
+        # Calculate address components
+        offset = address % self.block_size
+        index = self.get_index_from_address(address)
+        tag = address // (self.number_of_sets * self.block_size)
 
         for i in range(len(self.c[index].cache_set)):
             cache_line = self.c[index].cache_set[i]
             if cache_line.tag == tag:
-                # Cache hit
                 if self.replacement_policy == 0:  # LRU
                     self.update_lru(index, i)
                 else:  # NRU
                     self.update_nru(index, i)
                 cache_line.any_value_changed = True
-                # print("block=", cache_line.block)
-                # print("offset=", offset//4)
                 cache_line.block[offset//4] = data
                 return True
         
-        # Cache miss
         self.misses += 1
         return False  # on cache miss, need to again update the cache line
 
@@ -123,12 +142,12 @@ class Cache:
             for i in range(self.associativity):
                 self.nru[index][i] = 0
 
-    def get_replace_line_lru(self, index):
+    def get_replace_block_lru(self, index):
         for i in range(self.associativity):
             if self.lru[index][i] == self.associativity-1:
                 return i
     
-    def get_replace_line_nru(self, index):
+    def get_replace_block_nru(self, index):
         # First check if there are any lines not recently used (0)
         self.reset_nru_bits(index)
         
@@ -138,39 +157,39 @@ class Cache:
                 return i
         
         # If all lines are marked as recently used, return the first one
-        # (This should not happen due to reset_nru_bits, but added as a fallback)
         return 0
 
-    def get_replace_line(self, index):
+    def get_replace_block(self, index):
         if self.replacement_policy == 0:  # LRU
-            return self.get_replace_line_lru(index)
+            return self.get_replace_block_lru(index)
         else:  # NRU
-            return self.get_replace_line_nru(index)
+            return self.get_replace_block_nru(index)
 
-    def replace_line(self, address, cache_line_data, any_value_changed):
-        if address == None or cache_line_data == None:
+    def replace_block(self, address, cache_line_data, any_value_changed):
+        if address is None or cache_line_data is None:
             return None, None, None
-        tag = address >> (self.index_bits_length + self.offset_bits_length)
-        index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
-        offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
+        
+        # Calculate address components
+        offset = address % self.block_size
+        index = self.get_index_from_address(address)
+        tag = address // (self.number_of_sets * self.block_size)
 
-        line_to_replace_index = self.get_replace_line(index)
+        line_to_replace_index = self.get_replace_block(index)
         line_to_replace = self.c[index].cache_set[line_to_replace_index]
         should_replace = True
-        if line_to_replace.tag == None:
+        if line_to_replace.tag is None:
             should_replace = False
         cache_line_data_to_return = None
         address_to_return = None
 
-        if should_replace == True:
+        if should_replace:
             # Create a list of the proper size and then copy values
-            cache_line_data_to_return = [0] * len(self.c[index].cache_set[line_to_replace_index].block)
-            for i in range(len(self.c[index].cache_set[line_to_replace_index].block)):
-                cache_line_data_to_return[i] = self.c[index].cache_set[line_to_replace_index].block[i]
+            cache_line_data_to_return = [0] * len(line_to_replace.block)
+            for i in range(len(line_to_replace.block)):
+                cache_line_data_to_return[i] = line_to_replace.block[i]
             
-            address_to_return = self.c[index].cache_set[line_to_replace_index].tag << self.index_bits_length 
-            address_to_return = address_to_return | index 
-            address_to_return = address_to_return << self.offset_bits_length
+            # Reconstruct the base address of the replaced block
+            address_to_return = (line_to_replace.tag * self.number_of_sets + index) * self.block_size
 
         line_to_replace.tag = tag
         
@@ -184,15 +203,17 @@ class Cache:
             
         any_value_changed_to_return = line_to_replace.any_value_changed
         line_to_replace.any_value_changed = any_value_changed
-        if should_replace == True:
+        
+        if should_replace:
             return address_to_return, cache_line_data_to_return, any_value_changed_to_return
         else:
             return None, None, None
         
     def get_line_data(self, address):
-        tag = address >> (self.index_bits_length + self.offset_bits_length)
-        index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
-        offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
+        # Calculate address components
+        offset = address % self.block_size
+        index = self.get_index_from_address(address)
+        tag = address // (self.number_of_sets * self.block_size)
 
         index_of_line = None
         for i in range(len(self.c[index].cache_set)):
@@ -205,16 +226,15 @@ class Cache:
             return None, None, None
             
         # Create a list of the proper size and then copy values
-        cache_line_data_to_return = [0] * len(self.c[index].cache_set[index_of_line].block)
-        for i in range(len(self.c[index].cache_set[index_of_line].block)):
-            cache_line_data_to_return[i] = self.c[index].cache_set[index_of_line].block[i]
+        cache_line = self.c[index].cache_set[index_of_line]
+        cache_line_data_to_return = list(cache_line.block)  # Make a copy
         
-        address_to_return = self.c[index].cache_set[index_of_line].tag << self.index_bits_length 
-        address_to_return = address_to_return | index 
-        address_to_return = address_to_return << self.offset_bits_length
+        # Reconstruct the base address of the block
+        address_to_return = (cache_line.tag * self.number_of_sets + index) * self.block_size
         
-        any_value_changed_to_return = self.c[index].cache_set[index_of_line].any_value_changed
+        any_value_changed_to_return = cache_line.any_value_changed
 
+        # Remove from cache
         self.c[index].cache_set[index_of_line].tag = None
 
         return address_to_return, cache_line_data_to_return, any_value_changed_to_return
