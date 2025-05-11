@@ -20,7 +20,7 @@ class Simulator:
         self.L1_Instr_Latency = 4
         self.L1_Data_Latency = 4
         self.L2_Latency = 8
-        self.scratch_pad_latency = 1
+        self.scratch_pad_latency = 4
         self.main_merory_Latency = 20
         self.L1_Instr_cache_size = 64
         self.L1_Instr_cache_associativity = 4
