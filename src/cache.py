@@ -153,7 +153,7 @@ class Cache:
         tag = address >> (self.index_bits_length + self.offset_bits_length)
         index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
         offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
-   
+
         line_to_replace_index = self.get_replace_line(index)
         line_to_replace = self.c[index].cache_set[line_to_replace_index]
         should_replace = True
@@ -163,11 +163,15 @@ class Cache:
         address_to_return = None
 
         if should_replace == True:
-            cache_line_data_to_return = self.c[index].cache_set[line_to_replace_index].block
+            # Create a list of the proper size and then copy values
+            cache_line_data_to_return = [0] * len(self.c[index].cache_set[line_to_replace_index].block)
+            for i in range(len(self.c[index].cache_set[line_to_replace_index].block)):
+                cache_line_data_to_return[i] = self.c[index].cache_set[line_to_replace_index].block[i]
+            
             address_to_return = self.c[index].cache_set[line_to_replace_index].tag << self.index_bits_length 
             address_to_return = address_to_return | index 
             address_to_return = address_to_return << self.offset_bits_length
-           
+
         line_to_replace.tag = tag
         
         for i in range(self.block_size // 4):
@@ -189,7 +193,7 @@ class Cache:
         tag = address >> (self.index_bits_length + self.offset_bits_length)
         index = (address >> self.offset_bits_length) ^ (tag<<self.index_bits_length)
         offset = address ^ (address >> self.offset_bits_length << self.offset_bits_length)
-   
+
         index_of_line = None
         for i in range(len(self.c[index].cache_set)):
             cache_line = self.c[index].cache_set[i]
@@ -200,13 +204,17 @@ class Cache:
         if index_of_line is None:
             return None, None, None
             
-        cache_line_data_to_return = self.c[index].cache_set[index_of_line].block
+        # Create a list of the proper size and then copy values
+        cache_line_data_to_return = [0] * len(self.c[index].cache_set[index_of_line].block)
+        for i in range(len(self.c[index].cache_set[index_of_line].block)):
+            cache_line_data_to_return[i] = self.c[index].cache_set[index_of_line].block[i]
+        
         address_to_return = self.c[index].cache_set[index_of_line].tag << self.index_bits_length 
         address_to_return = address_to_return | index 
         address_to_return = address_to_return << self.offset_bits_length
-           
+        
         any_value_changed_to_return = self.c[index].cache_set[index_of_line].any_value_changed
 
         self.c[index].cache_set[index_of_line].tag = None
-   
+
         return address_to_return, cache_line_data_to_return, any_value_changed_to_return

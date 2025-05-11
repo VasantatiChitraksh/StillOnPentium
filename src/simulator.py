@@ -287,14 +287,14 @@ class Simulator:
                         address = address-(offset_bits)
                     for i in range(self.cache_block_size//4):
                         temp_data_array[i] = self.mem.read_word(address+i*4)
-                    temp_addr, temp_data_array, temp_value_changed = self.cache1.replace_line(
+                    temp_addr1, temp_data_array1, temp_value_changed1 = self.cache1.replace_line(
                         address, temp_data_array, False)
-                    temp_addr, temp_data_array, temp_value_changed = self.cache2.replace_line(
-                        temp_addr, temp_data_array, temp_value_changed)
-                    if (temp_value_changed):
+                    temp_addr2, temp_data_array2, temp_value_changed2 = self.cache2.replace_line(
+                        temp_addr1, temp_data_array1, temp_value_changed1)
+                    if (temp_value_changed2):
                         for i in range(self.cache_block_size//4):
                             self.mem.write_word(
-                                temp_addr+i*4, temp_data_array[i])
+                                temp_addr2+i*4, temp_data_array[i])
                 else:
                     temp_addr, temp_data_array, temp_value_changed = self.cache2.get_line_data(
                         address)
