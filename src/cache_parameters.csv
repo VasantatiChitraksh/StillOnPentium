@@ -1,5 +1,5 @@
 cache_type,latency,block_size,associativity,cache_size
 L1_Instr,4,8,4,400
-L1_Data,4,8,50,400
+L1_Data,4,8,1,400
 L2,8,8,8,1024
 Main_Memory,20,,,  

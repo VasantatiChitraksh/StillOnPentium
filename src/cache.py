@@ -238,3 +238,23 @@ class Cache:
         self.c[index].cache_set[index_of_line].tag = None
 
         return address_to_return, cache_line_data_to_return, any_value_changed_to_return
+
+    def print_cache(self):
+        """
+        Print the contents of the cache, showing only tags and block data.
+        """
+        print("\nCache Contents:")
+        for set_index, cache_set in enumerate(self.c):
+            print(f"\nSet {set_index}:")
+            for line_index, cache_line in enumerate(cache_set.cache_set):
+                if cache_line.tag is not None:
+                    # Construct base address for this line
+                    base_address = (cache_line.tag * self.number_of_sets + set_index) * self.block_size
+                    print(f"  Line {line_index}:")
+                    print(f"    Tag: {cache_line.tag}")
+                    print(f"    Base Address: {base_address}")
+                    print(f"    Block Data: {cache_line.block}")
+                else:
+                    print(f"  Line {line_index}: Empty")
+
+    

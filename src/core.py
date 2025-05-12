@@ -415,6 +415,7 @@ class Core:
                 self.cache_stall = False
                 return
             memory_value = Simulator.memory_system(effective_addr, None, 0)
+            # memory_value = Simulator.mem.read_word(effective_addr)
             self.cache_stall = True
             memory_ready.append(MEM_Stage[1])
             memory_ready.append(memory_value)
