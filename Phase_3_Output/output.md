@@ -370,80 +370,11 @@ Scratchpad Memories (SPMs) generally have lower latencies and power requirements
 
 Now to determine how scratch pad improves the no of cycles and improves the performance. To prove this we will run the sum cycle 200 times, once without using SPM at all, then we will use SPM for the first 100 strides, and use the memory system directly for the next 100 strides. We will check both the outputs and determine which is better and why. 
 
-```out=
-Algorithm - 1
-
-.data
-arr: .word 1 2 3 4 ... 20000
-sum: .word 0, 0, 0, 0, 0
-
-.text
-add x1,x0,cid  #x1 = cid
-add x2,x0,x0   #x2 = s
-addi x3,x0,100 #x3 = x
-addi x4,x0,4   #x4 = 4
-la x5,arr      #x5 = arr base
-la x6,sum      #x6 = sum base
-addi x7,x0,0   #x7 = i
-addi x8,x0,25  #x8 = 25
-addi x30,x0,100 #x30 = 100
-addi x29 x0 200 
-
-
-loop1:
-    beq x7 x30 next2
-    addi x7 x7 1
-    addi x12 x0 0
-    loop2:
-    beq x12 x29 loop1
-    mul x13 x4 x1 
-    add x13 x13 x6
-    lw x2 0(x13)
-
-    mul x14 x3 x12
-    mul x14 x14 x4
-    add x14 x14 x5
-    lw x15 0(x14)
-
-    add x2 x2 x15
-
-    sw x2,0(x13) 
-    addi x12 x12 1
-    j loop2
-
-next2:
-    beq x1,x0,total_sum 
-    j exit
-
-total_sum:
-    add x2,x0,x0 
-    la x11,sum 
-    addi x12,x0,0 #i = 0
-    addi x13,x0,4 #total cores = 4
-
-sum_loop:
-    beq x12,x13,store_total # if i == 4, exit loop
-    lw x14,0(x11) #Load sum[i]
-    add x2,x2,x14 #Add to total sum
-    addi x11,x11,4 #Move to next sum element
-    addi x12,x12,1 #i++
-    j sum_loop
-
-store_total:
-    la x11,sum 
-    addi x11,x11,0 #Point to the last word (total sum location)
-    sw x2,0(x11) #Store total sum in the last word of sum array  
-exit:
-    nop
-    
-Algorithm - 2
-
-
-```
-
 #### Output
 Without SPM
 ```code=
+Algorithm - 1
+
 .data
 arr: .word 1 2 3 4 ..... 20000 
 sum: .word 0, 0, 0, 0, 0
@@ -538,6 +469,8 @@ Miss Rate (%)  8.33           0.0                 100.0
 
 With SPM
 ```code=
+Algorithm - 2
+
 .data
 arr: .word 1 2 3 .... 20000
 sum: .word 0, 0, 0, 0, 0
