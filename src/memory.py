@@ -8,7 +8,7 @@ class Memory:
     def read_word(self, address: int) -> int:
         if address % 4 != 0 or address < 0 or address >= self.size//4:
             # Check for valid address
-            if address <= 4092 and address >= self.data_section_end:
+            if address <= (self.size-4) and address >= self.data_section_end:
                 index = address//4
                 return self.word[index]
             raise ValueError(
@@ -18,7 +18,7 @@ class Memory:
 
     def write_word(self, address: int, value: int):
         if address % 4 != 0 or address < 0 or address >= self.size//4:
-            if address <= 4092 and address >= self.data_section_end:
+            if address <= (self.size-4) and address >= self.data_section_end:
                 index = address//4
                 self.word[index] = value
                 return
