@@ -6,8 +6,8 @@ This project is a multi-core simulator written in Python. The simulator emulates
 - **Phase_1_Output/**: Output Files of phase 1
 - **Phase_2_Output/**: Output Files of phase 2
 - **Phase_3_Output/**:
-  - **output.md**: The phase 3 outputs and analysis
-  - **Report.md**: The phase 3 implementation report
+  - **[output.md](Phase_3_Output/output.md)**: The phase 3 outputs and analysis
+  - **[Report.md](Phase_3_Output/Report.md)**: The phase 3 implementation report
 - **src/**
   - **main.py**: Main Simulator file
   - **simulator.py**: Multi Core Execution
