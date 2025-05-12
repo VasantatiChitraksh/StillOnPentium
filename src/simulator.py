@@ -38,7 +38,7 @@ class Simulator:
             self.L1_Instr_cache_size, self.cache_block_size, self.L1_Instr_cache_associativity,self.replacement_policy)
         self.cache2 = Cache(self.L2_cache_size,
                             self.cache_block_size, self.L2_cache_associativity,self.replacement_policy)
-        self.mem = Memory(size_in_bytes=4096)  # Initialize memory
+        self.mem = Memory(size_in_bytes=65536)  # Initialize memory
         self.scratch_pad = Memory(size_in_bytes=400)  # Initialize scratchpad
         self.scratchpad_start = 2048
         self.cores = [core.Core(core_id=i)
