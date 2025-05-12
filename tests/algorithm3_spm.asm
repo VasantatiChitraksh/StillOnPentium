@@ -1,5 +1,5 @@
 .scratchpad
-spm_arr: .word 0 0 0 0 0 0 
+spm_arr: .word 0 0 0 0 0 0
 
 .data
 arr: .word 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 
@@ -205,84 +205,96 @@ arr: .word 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
 sum: .word 0, 0, 0, 0, 0
 
 .text
-add x1, x0, cid        # x1 = CID
-add x2, x0, x0         # x2 = temp register
-addi x3, x0, 100       # x3 = X stride
-addi x4, x0, 4         # x4 = word size
-la x5, arr             # x5 = base address of array
-la x6, sum             # x6 = base address of sum[]
-la x11, spm_arr        # x11 = base address of SPM
-addi x30, x0, 100      # x30 = loop count (100 iterations per batch)
-addi x31, x0, 2        # x31 = number of batches (2)
+add x1,x0,cid       # x1 = cid
+add x2,x0,x0        # x2 = s (initial sum)
+addi x3,x0,100      # x3 = stride factor X = 100
+addi x4,x0,4        # x4 = size of word (4 bytes)
+la x5,arr           # x5 = base address of arr
+la x6,sum           # x6 = base address of sum
+addi x7,x0,0        # x7 = loop counter i
+addi x30,x0,100     # x30 = constant 100
+addi x29,x0,200     # x29 = constant 200 (for full range)
 
-addi x20, x0, 0        # x20 = batch number (0 or 1)
+loop1:
+    beq x7 x30 next2        # if i == 100, jump to next2
+    addi x7 x7 1            # i++
+    addi x12 x0,0           # j = 0
 
-batch_loop:
-    beq x20, x31, after_all_batches
+    loop2:
+        beq x12 x30 loop1   # if j == 100, go to next i
+        mul x13 x4 x1       # x13 = 4 * cid
+        add x13 x13 x6      # x13 = &sum[cid]
+        lw x2 0(x13)        # load sum[cid] into x2
 
-    ##### LOAD 100 ELEMENTS INTO SPM #####
-    la x11, spm_arr     # Reset SPM pointer
-    addi x7, x0, 0      # i = 0
-load_loop:
-    beq x7, x30, compute_loop
-    # offset = (i + batch*100) * X * 4
-    mul x8, x20, x30    # x8 = batch * 100
-    add x8, x8, x7      # x8 = i + batch*100
-    mul x8, x8, x3      # x8 = (i + batch*100) * X
-    mul x9, x8, x4      # x9 = byte offset
-    add x9, x9, x5      # x9 = address of arr[i*X + batch*100*X]
-    lw x10, 0(x9)
-    sw_spm x10, 0(x11)
-    addi x11, x11, 4
-    addi x7, x7, 1
-    j load_loop
+        mul x14 x3 x12      # x14 = stride * j
+        mul x14 x14 x4      # x14 = byte offset
+        add x14 x14 x5      # x14 = address of a[j * stride]
+        lw x15 0(x14)       # load a[j * stride] into x15
 
-##### COMPUTE sum[cid] += SPM[i] #####
-compute_loop:
-    addi x7, x0, 0
-compute_inner_loop:
-    beq x7, x30, next_batch
-    la x11, spm_arr
-    mul x12, x4, x1       # x12 = offset = 4 * cid
-    add x12, x12, x6      # x12 = &sum[cid]
-    lw x2, 0(x12)         # x2 = sum[cid]
+        add x2 x2 x15       # sum += value
+        sw x2 0(x13)        # store updated sum
 
-    mul x13, x7, x4
-    add x13, x13, x11     # address of SPM[i]
-    lw_spm x14, 0(x13)    # x14 = SPM[i]
+        addi x12 x12 1      # j++
+        j loop2
 
-    add x2, x2, x14       # sum[cid] += SPM[i]
-    sw x2, 0(x12)
+next2:
+    la x11,spm_arr          # initialize x11 to base of spm_arr
+    li x7 100
 
-    addi x7, x7, 1
-    j compute_inner_loop
 
-##### Next Batch #####
-next_batch:
-    addi x20, x20, 1
-    j batch_loop
+loop3:
+    beq x7 x29 next3
+    mul x9 x3 x7
+    mul x9 x9 x4
+    add x9 x9 x5
+    lw x10 0(x9)
+    sw_spm x10 0(x11)
+    addi x11 x11 4
+    addi x7 x7 1
+    j loop3
 
-##### Combine Sums if CID == 1 #####
-after_all_batches:
-    li x15, 0
-    bne x1, x15, exit     # only CID 1 proceeds
+next3:  
+    addi x7 x0 0
+    la x11 spm_arr
+    loop4:
+        beq x7 x30 next4
+        addi x7 x7 1
+        addi x12 x0 0
+        loop5:
+        beq x12 x30 loop4
 
-    la x11, sum
-    addi x12, x0, 1       # i = 1
-    lw x2, 4(x11)         # sum[1] already in x2
-combine_loop:
-    addi x12, x12, 1
-    beq x12, x15, print   # stop at i = 4
-    mul x13, x12, x4
-    add x13, x13, x11
-    lw x14, 0(x13)
-    add x2, x2, x14
-    j combine_loop
+        mul x14 x12 x4
+        add x14 x14 x11
+        lw_spm x15 0(x14)
 
-print:
-    sw x2, 0(x11)         # store final total in sum[0]
-    # print instruction assumed here
-    # print sum[1] (i.e., final result)
+        add x2 x2 x15
+        addi x12 x12 1
+        j loop5
 
+next4:
+    mul x13 x4 x1
+    add x13 x13 x6
+    sw x2 0(x13)
+    beq x1,x0,total_sum 
+    j exit
+
+total_sum:
+    add x2,x0,x0 
+    la x11,sum 
+    addi x12,x0,0 #i = 0
+    addi x13,x0,4 #total cores = 4
+
+sum_loop:
+    beq x12,x13,store_total # if i == 4, exit loop
+    lw x14,0(x11) #Load sum[i]
+    add x2,x2,x14 #Add to total sum
+    addi x11,x11,4 #Move to next sum element
+    addi x12,x12,1 #i++
+    j sum_loop
+
+store_total:
+    la x11,sum 
+    addi x11,x11,0 #Point to the last word (total sum location)
+    sw x2,0(x11) #Store total sum in the last word of sum array  
 exit:
     nop

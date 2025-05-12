@@ -40,7 +40,6 @@ class Simulator:
                             self.cache_block_size, self.L2_cache_associativity,self.replacement_policy)
         self.mem = Memory(size_in_bytes=131072)  # Initialize memory
         self.scratch_pad = Memory(size_in_bytes=400)  # Initialize scratchpad
-        self.scratchpad_start = 130000
         self.cores = [core.Core(core_id=i)
                       for i in range(4)]  # Initialize cores
         self.latency_config = {
@@ -82,13 +81,7 @@ class Simulator:
             for value in scratchpad_instr.values:
                 memory.write_word(address, value)
                 address += 4
-        
-        address = self.scratchpad_start
-        self.mem.set_data_section_end(address)
-        for scratchpad_instr in scratchpad_instructions:
-            for value in scratchpad_instr.values:
-                self.mem.write_word(address, value)
-                address += 4
+
         return label_map
 
     def execute_data_instruction(self, data_instructions, data_values: int, memory) -> dict:
