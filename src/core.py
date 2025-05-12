@@ -452,7 +452,6 @@ class Core:
                 self.cache_stall = False
                 return
             Simulator.scratch_pad.write_word(effective_addr,value)
-            Simulator.mem.write_word(effective_addr+Simulator.scratchpad_start,value)
             self.cache_stall = True
             self.MEM_WB = memory_ready
         else:
