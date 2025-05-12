@@ -1,6 +1,6 @@
 import sys
-import matplotlib.pyplot as plt
-import numpy as np
+# import matplotlib.pyplot as plt
+# import numpy as np
 from simulator import Simulator
 
 def visualize_cores(cores):
@@ -60,5 +60,5 @@ if __name__ == '__main__':
         simulator.run_simulator(assembly_file)
         
         # Show visualizations separately
-        visualize_cores(simulator.cores)
+        # visualize_cores(simulator.cores)
         # visualize_memory(simulator.mem.word)

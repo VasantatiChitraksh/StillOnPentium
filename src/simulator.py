@@ -16,7 +16,7 @@ class Simulator:
         self.cycle = 0
         self.replacement_policy = input(
             "Enter replacement policy (0 for LRU, 1 for NRU): ")
-        self.instruction_address_start = 67584
+        self.instruction_address_start = 90000
         self.L1_Instr_Latency = 4
         self.L1_Data_Latency = 4
         self.L2_Latency = 8
@@ -40,7 +40,7 @@ class Simulator:
                             self.cache_block_size, self.L2_cache_associativity,self.replacement_policy)
         self.mem = Memory(size_in_bytes=131072)  # Initialize memory
         self.scratch_pad = Memory(size_in_bytes=400)  # Initialize scratchpad
-        self.scratchpad_start = 69632
+        self.scratchpad_start = 130000
         self.cores = [core.Core(core_id=i)
                       for i in range(4)]  # Initialize cores
         self.latency_config = {
@@ -447,7 +447,7 @@ class Simulator:
 
         print("\nMemory Dump:")
 
-        for idx in range(1024*8, 1024*11, 6):
+        for idx in range(1024*18, 1024*22, 6):
             addresses = [
                 f"{decimal_to_hex(i*4)}: {self.mem.word[i]}" for i in range(idx, min(idx + 6, 1024*32))]
             print("  |  ".join(addresses))

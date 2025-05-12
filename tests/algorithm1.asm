@@ -102,62 +102,59 @@ arr: .word 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
 sum: .word 0, 0, 0, 0, 0
 
 .text
-add x1,x0,cid #x1 = cid
-add x2,x0,x0 # x2 = s
-addi x3,x0,100 # x3 = x
-addi x4,x0,4 # x4 = 4
-la x5,arr # x5 = arr base
-la x6,sum # x6 = sum base
-addi x7,x0,0 # x7 = i
-addi x8,x0,25 # x8 = 25
-addi x30,x0,100 # x30 = 100
+add x1,x0,cid  #x1 = cid
+add x2,x0,x0   #x2 = s
+addi x3,x0,100 #x3 = x
+addi x4,x0,4   #x4 = 4
+la x5,arr      #x5 = arr base
+la x6,sum      #x6 = sum base
+addi x7,x0,0   #x7 = i
+addi x8,x0,25  #x8 = 25
+addi x30,x0,100 #x30 = 100
+
 
 loop1:
-    mul x9,x8,x1 # x9 = cid*25 = j
-    add x20,x9,x8 # x10 = cid*25 + 25 = j+25
-    
+    beq x7 x30 next2
+    addi x7 x7 1
+    addi x12 x0 0
     loop2:
-         mul x11,x3,x9 # x11 = x*j
-         add x12,x11,x7 # x12 = i + j*x
-         mul x13,x12,x4 # x13 = (i + j*x) * 4
-         add x14,x13,x5 # x14 = arr + (i + j*x) * 4
-         lw x15,0(x14) # x14 = arr[i +j*x]
-         add x2,x2,x15 # s += arr[i +j*x]
-         mul x16,x4,x1 # x16 = cid*4
-         add x18,x16,x6 # x17 = sum + cid*4
-         sw x2,0(x18) # stores s in sum[cid]
-         addi x9,x9,1 # j++
-         bne x9,x20,loop2 # if j!=x10 , loop
-    
-    addi x7,x7,1 # i++
-    bne x30,x7,loop1 # if i != 100, loop
-     
-storesum:
-    mul x16,x4,x1 # x16 = cid*4
-    add x18,x16,x6 # x17 = sum + cid*4
-    sw x2,0(x18) 
-    sync
-    beq x1,x0,total_sum # Only core 0 (cid=0) computes total sum
+    beq x12 x30 loop1
+    mul x13 x4 x1 
+    add x13 x13 x6
+    lw x2 0(x13)
+
+    mul x14 x3 x12
+    mul x14 x14 x4
+    add x14 x14 x5
+    lw x15 0(x14)
+
+    add x2 x2 x15
+
+    sw x2,0(x13) 
+    addi x12 x12 1
+    j loop2
+
+next2:
+    beq x1,x0,total_sum 
     j exit
 
 total_sum:
-    add x2,x0,x0 # Reset x2 to 0 for total sum
-    la x11,sum # Load base address of sum array
-    addi x12,x0,0 # i = 0
-    addi x13,x0,4 # total cores = 4
+    add x2,x0,x0 
+    la x11,sum 
+    addi x12,x0,0 #i = 0
+    addi x13,x0,4 #total cores = 4
 
 sum_loop:
     beq x12,x13,store_total # if i == 4, exit loop
-    lw x14,0(x11) # Load sum[i]
-    add x2,x2,x14 # Add to total sum
-    addi x11,x11,4 # Move to next sum element
-    addi x12,x12,1 # i++
+    lw x14,0(x11) #Load sum[i]
+    add x2,x2,x14 #Add to total sum
+    addi x11,x11,4 #Move to next sum element
+    addi x12,x12,1 #i++
     j sum_loop
 
 store_total:
-    la x11,sum # Reload base address of sum array
-    addi x11,x11,0 # Point to the last word (total sum location)
-    sw x2,0(x11) # Store total sum in the last word of sum array
-
+    la x11,sum 
+    addi x11,x11,0 #Point to the last word (total sum location)
+    sw x2,0(x11) #Store total sum in the last word of sum array  
 exit:
     nop
