@@ -471,6 +471,8 @@ With SPM
 ```code=
 Algorithm - 2
 
+.scratchpad
+arr:.word 0 0 0 0 0
 .data
 arr: .word 1 2 3 .... 20000
 sum: .word 0, 0, 0, 0, 0
