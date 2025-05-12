@@ -414,7 +414,7 @@ class Core:
                 self.memory_remaining_time = latency-1
                 self.cache_stall = False
                 return
-            memory_value = Simulator.cache_controller(effective_addr, None, 0)
+            memory_value = Simulator.memory_system(effective_addr, None, 0)
             self.cache_stall = True
             memory_ready.append(MEM_Stage[1])
             memory_ready.append(memory_value)
@@ -427,7 +427,7 @@ class Core:
                 self.memory_remaining_time = latency-1
                 self.cache_stall = False
                 return
-            Simulator.cache_controller(effective_addr, value, 1)
+            Simulator.memory_system(effective_addr, value, 1)
             self.cache_stall = True
             self.MEM_WB = memory_ready
         elif opcode == "lw_spm":
