@@ -1,8 +1,13 @@
 # StillOnPentium
 
-This project is a multi-core simulator written in Python. The simulator emulates four processor cores executing a common assembly program in parallel with a shared memory space of 4KB.
+This project is a multi-core simulator written in Python. The simulator emulates four processor cores executing a common assembly program in parallel with a shared memory space of 128KB.
 
 ## Project Structure
+- **Phase_1_Output/**: Output Files of phase 1
+- **Phase_2_Output/**: Output Files of phase 2
+- **Phase_3_Output/**:
+  - **output.md**: The phase 3 outputs and analysis
+  - **Report.md**: The phase 3 implementation report
 - **src/**
   - **main.py**: Main Simulator file
   - **simulator.py**: Multi Core Execution
@@ -11,6 +16,9 @@ This project is a multi-core simulator written in Python. The simulator emulates
   - **memory.py**: To Handle Memory
   - **instructions.py**:Instruction Dataclass
   - **data_instructions.py**: .data Section
+  - **scratchpad_instructions.py** : .scratchpad Section
+  - **cache.py**: Cache Class
+  - **cache_parameters.csv**: Input file for cache details
 - **tests/**: Unit tests and sample assembly programs.
 - **docs/**
   - **design.md**
@@ -22,9 +30,16 @@ Please refer to [docs/meeting_minutes.md](docs/meeting_minutes.md) for the meeti
 ## Getting Started
 1. Clone the repository.
 2. Navigate to the project directory.
-3. Run the simulator using `python src/main.py [assembly_filename].asm`.(Make sure the assembly file to be run is in the root directory or in the tests folder)
-4. For e.g., `python src/main.py tests/bubble_sort.asm` or `python src/main.py tests/sample.asm`
+3. Run the simulator using `python src/main.py [assembly_filename].asm ./cache_parameters.csv`.(Make sure the assembly file to be run is in the root directory or in the tests folder)
+4. For e.g., `python src/main.py tests/bubble_sort.asm src/cache_parameters.csv` or `python src/main.py tests/sample.asm src/cache_parameters.csv`
 
+
+## Features (Phase 3)
+- L1 cache implemented with seperate instruction and data caches
+- L2 cache implemented
+- Added Latencies to all cache and implemented a proper memory hierarchy with "lru" and "nru" replacement policies.
+- Implemented SYNC to synchronize all the compute units
+- ScratchPad feature for frequently used data.
 
 ## Features (Phase 2)
 - The cores now follow the five stages of the RISC-V pipeline with a single instruction fetch unit for all the cores
