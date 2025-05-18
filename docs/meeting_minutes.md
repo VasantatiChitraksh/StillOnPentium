@@ -1,5 +1,29 @@
 # Meeting Minutes - Meetings held and Design changes made
 
+# Phase 3
+
+### 14th May 2025
+### Members : K Sandeep, V Chitraksh
+- Test cases for the program were written.
+- Final tests and debugs done
+---
+
+### 12th May 2025
+### Members : K Sandeep, V Chitraksh
+- Added Scratchpad Memory
+- Modified parser and memory modules to accomodate the scratchpad instructions
+---
+
+### 10th May 2025
+### Members : K Sandeep, V Chitraksh
+- Decided on adding NRU (Not recently used) as the cache replacement policies, with the user being able to select wither LRU and NRU
+---
+
+### 8th May 2025
+### Members : K Sandeep, V Chitraksh
+- Started work on adding cache with LRU as the replacement policy
+---
+
 # Phase 2
 
 ### 10th Mar 2025
